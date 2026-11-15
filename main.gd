@@ -20,6 +20,8 @@ var destination := Vector2i(-1, -1)
 var distance := 0
 var current_system: StarSystem
 var systems_cache := {}
+var ship_body: Variant = null
+var ship_orbite_us := 0.0
 
 var galaxy_map: GalaxyMap
 var system_map: SystemMap
@@ -180,6 +182,7 @@ func _build_tabs() -> void:
 	system_map = SystemMap.new()
 	system_map.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(1).add_child(system_map)
+	system_map.travel_requested.connect(_on_voyage_inter)
 
 	crew_panel = CrewPanel.new()
 	crew_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -297,6 +300,13 @@ func _start_game() -> void:
 	characters = []
 	captain = null
 	current_system = get_system(current_pos)
+	ship_body = null
+	ship_orbite_us = float(current_system.limite)
+	for c in current_system.corps:
+		if c["type"] == "planète":
+			ship_body = c
+			ship_orbite_us = float(c["orbite"])
+			break
 	refresh_all()
 
 func get_system(cell: Vector2i) -> StarSystem:
@@ -321,7 +331,9 @@ func get_system(cell: Vector2i) -> StarSystem:
 	return s
 
 func docked() -> bool:
-	return current_system != null and current_system.peut_amarrer()
+	if current_system == null or ship_body == null:
+		return false
+	return ship_body["type"] == "planète" or ship_body["type"] == "station"
 
 func soute_used() -> float:
 	var u := 0.0
@@ -637,6 +649,8 @@ func _on_calc_voyage() -> void:
 	if res["arrivee"]:
 		current_pos = destination
 		current_system = dest_sys
+		ship_body = null
+		ship_orbite_us = float(dest_sys.limite)
 		if not galaxy_map.explored.has(destination):
 			galaxy_map.explored.append(destination)
 		msg_label.text = "Arrivé à %s (%s)." % [dest_sys.nom, GalaxyData.coord_label(destination.x, destination.y)]
@@ -645,6 +659,8 @@ func _on_calc_voyage() -> void:
 	elif res["a_sec"] and res["case_finale"] != null:
 		current_pos = res["case_finale"]
 		current_system = get_system(current_pos)
+		ship_body = null
+		ship_orbite_us = float(current_system.limite)
 		msg_label.text = "Panne sèche — position relevée : %s." % GalaxyData.coord_label(current_pos.x, current_pos.y)
 	for c in res["resume"]["cases_relees"]:
 		if not galaxy_map.explored.has(c):
@@ -653,15 +669,90 @@ func _on_calc_voyage() -> void:
 	galaxy_map.destination = destination
 	refresh_all()
 
+func _on_voyage_inter(body: Dictionary) -> void:
+	if body == null or current_system == null:
+		return
+	if not can_travel():
+		system_map.set_message("Voyage interplanétaire impossible : il faut un Pilote ET une Vigie à leur poste.")
+		return
+	var dep_o := ship_orbite_us
+	var arr_o := float(body["orbite"])
+	var dist := absf(arr_o - dep_o)
+	if dist < 0.0001:
+		system_map.set_message("Le vaisseau est déjà à la hauteur de %s." % str(body.get("nom", "?")))
+		return
+	var sk := _post_skills()
+	var route_key := "g" if current_system.route == "Route galactique" else ("c" if current_system.route == "Route commerciale" else "x")
+	var cfg := {
+		"mode": "inter",
+		"distance": dist,
+		"vitesse": ship.vitesse_croisiere_us_j,
+		"route_key": route_key,
+		"dep_orbite": dep_o,
+		"arr_orbite": arr_o,
+		"arr_nom": str(body.get("nom", "?")),
+		"p1pi": sk["pi"], "p1na": sk["na"], "p2pi": sk["pi"], "p2na": sk["na"],
+		"v1se": sk["se"], "v1ss": sk["ss"], "v2se": sk["se"], "v2ss": sk["ss"],
+		"cae": sk["cae"], "ing": sk["ing"], "carto": sk["carto"],
+		"equip": characters.size(),
+		"passagers": 0,
+		"tonnage": ship.tonnage,
+		"radix_reserve": ship.radix_pc,
+		"myst": false,
+		"pieces": int(ship.cargaison.get("Pièces détachées (1 kg)", 0)),
+	}
+	var res := TravelSim.simulate(cfg)
+	if res["suivi_reserve"]:
+		ship.radix_pc = int(round(res["reserve"]))
+	ship.rations = maxi(0, ship.rations - res["resume"]["rations"])
+	ship.cargaison["Ration"] = ship.rations
+	var pieces_used: int = res["resume"].get("pieces_used", 0)
+	if pieces_used > 0:
+		var dispo: int = int(ship.cargaison.get("Pièces détachées (1 kg)", 0))
+		ship.cargaison["Pièces détachées (1 kg)"] = maxi(0, dispo - pieces_used)
+		if int(ship.cargaison["Pièces détachées (1 kg)"]) == 0:
+			ship.cargaison.erase("Pièces détachées (1 kg)")
+	var sal: int = salaire_jour() * int(res["jours_count"])
+	credits = maxi(0, credits - sal)
+	for deg in res["resume"]["degats"]:
+		if str(deg).contains("PC"):
+			continue
+		ship.subir_degats(str(deg))
+	var ligne_march := ""
+	if res["arrivee"] and (body["type"] == "planète" or body["type"] == "station"):
+		ligne_march = _test_marchandage()
+	if res["arrivee"]:
+		ship_body = body
+		ship_orbite_us = arr_o
+		system_map.set_message("Arrivé à %s (orbite %d US).%s" % [str(body.get("nom", "?")), int(arr_o), (" " + ligne_march) if ligne_march != "" else ""])
+	elif res["a_sec"]:
+		var parc := dist - float(res["restant"])
+		var signe := 1.0 if arr_o >= dep_o else -1.0
+		ship_orbite_us = dep_o + signe * parc
+		ship_body = null
+		res["orbite_finale"] = ship_orbite_us
+		system_map.set_message("Panne sèche à l'orbite %s US (reste %s US)." % [MAUtils.fmt_num(ship_orbite_us), MAUtils.fmt_num(float(res["restant"]))])
+	else:
+		system_map.set_message("Voyage interrompu (reste %s US)." % MAUtils.fmt_num(float(res["restant"])))
+	_render_journal(res, current_system, sal, ligne_march)
+	refresh_all()
+
 func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, ligne_march := "") -> void:
-	var dep: Vector2i = res["cfg"]["dep"]
-	var arr: Vector2i = res["cfg"]["arr"]
-	var bb := "[b][color=gold]Voyage : %s → %s[/color][/b]\n" % [GalaxyData.coord_label(dep.x, dep.y), GalaxyData.coord_label(arr.x, arr.y)]
-	bb += "Distance : %s PC · Vitesse : %d PC/j · Route : %s (péril %s/jour)\n" % [MAUtils.fmt_int(res["cfg"]["distance"]), res["cfg"]["vitesse"], dest_sys.route, {"g": "1/8", "c": "1/4"}.get(res["cfg"]["route_key"], "1/2")]
-	if res["saut"] != null:
+	var geo: bool = res["cfg"].get("dep", null) != null
+	var hyper: bool = res["cfg"].get("mode", "hyper") == "hyper"
+	var unite := "PC" if hyper else "US"
+	var bb := ""
+	if geo:
+		var dep: Vector2i = res["cfg"]["dep"]
+		var arr: Vector2i = res["cfg"]["arr"]
+		bb = "[b][color=gold]Voyage : %s → %s[/color][/b]\n" % [GalaxyData.coord_label(dep.x, dep.y), GalaxyData.coord_label(arr.x, arr.y)]
+	else:
+		bb = "[b][color=gold]Voyage interplanétaire : orbite %s US → %s (orbite %s US)[/color][/b]\n" % [MAUtils.fmt_num(float(res["cfg"].get("dep_orbite", 0.0))), str(res["cfg"].get("arr_nom", "?")), MAUtils.fmt_num(float(res["cfg"].get("arr_orbite", 0.0)))]
+	bb += "Distance : %s %s · Vitesse : %d %s/j · Route : %s (péril %s/jour)\n" % [MAUtils.fmt_num(float(res["cfg"]["distance"])), unite, int(res["cfg"]["vitesse"]), unite, dest_sys.route, {"g": "1/8", "c": "1/4"}.get(res["cfg"]["route_key"], "1/2")]
+	if hyper and res["saut"] != null:
 		var s = res["saut"]
 		bb += "Calcul du saut : Pilote %d, Navigation +%d (%s) : %d tentative(s) = %s, %d succès excédentaire(s) retranché(s) du premier jet de péril.\n" % [s["pilote"], s["na"], "TD" if s["mode"] == "TD" else "normal", s["essais"], TravelSim.heure_txt(s["heures"]), s["exc"]]
-	else:
+	elif hyper:
 		bb += "Calcul du saut : aucun Pilote avec Navigation à bord — saut non simulé.\n"
 	for j in res["jours"]:
 		bb += "\n[b]Jour %d[/b] (quart %d) :\n" % [j["num"], j["actif"]]
@@ -674,9 +765,12 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, lign
 	if res["arrivee"]:
 		bb += "[color=7bed9f]Arrivé en %d jour(s) (%s de vol le dernier jour).[/color]\n" % [res["jours_count"], TravelSim.heure_txt(res["heures_fin"])]
 	elif res["a_sec"]:
-		bb += "[color=ff5544]Panne sèche le jour %d[/color] — position relevée : %s.\n" % [res["jour_sec"], GalaxyData.coord_label(res["case_finale"].x, res["case_finale"].y) if res["case_finale"] != null else "?"]
+		if geo and res["case_finale"] != null:
+			bb += "[color=ff5544]Panne sèche le jour %d[/color] — position relevée : %s.\n" % [res["jour_sec"], GalaxyData.coord_label(res["case_finale"].x, res["case_finale"].y)]
+		else:
+			bb += "[color=ff5544]Panne sèche le jour %d[/color] — arrêt à l'orbite %s US.\n" % [res["jour_sec"], MAUtils.fmt_num(float(res.get("orbite_finale", 0.0)))]
 	else:
-		bb += "Voyage interrompu après %d jour(s), reste %s PC.\n" % [res["jours_count"], MAUtils.fmt_num(res["restant"])]
+		bb += "Voyage interrompu après %d jour(s), reste %s %s.\n" % [res["jours_count"], MAUtils.fmt_num(res["restant"]), unite]
 	bb += "Périls : %d (%d évités, %d subis) · Pannes : %d (%d réparées) · Retards : %d · Relevés : %d\n" % [T["perils"].size(), T["evites"], T["subis"], T["pannes"], T["reparees"], T["retards"], T["releves"]]
 	if T["degats"].size() > 0:
 		bb += "Dégâts subis : " + " ; ".join(T["degats"]) + "\n"
@@ -731,6 +825,7 @@ func refresh_all() -> void:
 	crew_panel.set_characters(characters, captain)
 	ship_panel.set_ship(ship)
 	system_map.set_system(current_system)
+	system_map.set_ship_pos(ship_orbite_us, ship_body)
 	galaxy_map.current_pos = current_pos
 	galaxy_map.queue_redraw()
 	travel_info_label.text = "Radix : %s / %s PC · Vitesse : %d PC/j" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), ship.vitesse_hyper_pc_j]
