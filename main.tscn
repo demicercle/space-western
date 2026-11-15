@@ -49,5 +49,8 @@ layout_mode = 2
 [node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/Tabs"]
 layout_mode = 2
 
+[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/Tabs"]
+layout_mode = 2
+
 [node name="TabRecruter" type="Control" parent="HSplit/RightVBox/Tabs"]
 layout_mode = 2

@@ -74,7 +74,7 @@ static func galactic_basic(nom: String) -> Ship:
 	s.radix_pc = s.autonomie_pc
 	s.rations = 30
 	s.cargaison = {
-		"Rations": 30,
+		"Ration": 30,
 		"Medikit": 1,
 		"Munitions laser (x10)": 4,
 		"Scaphandre": 2,
@@ -116,7 +116,7 @@ static func galactic_scout(nom: String) -> Ship:
 	s.radix_pc = s.autonomie_pc
 	s.rations = 30
 	s.cargaison = {
-		"Rations": 30,
+		"Ration": 30,
 		"Medikit": 1,
 		"Munitions laser (x10)": 4,
 		"Scaphandre": 2,

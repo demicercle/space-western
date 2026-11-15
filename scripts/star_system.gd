@@ -18,6 +18,7 @@ var corps: Array = []
 var ceinture = null
 var act_solaire := ""
 var act_solaire_proche := ""
+var est_relais := false
 
 static func _nom_systeme() -> String:
 	var n: String = MAUtils.pick(SystemTables.NOM_SYL) + MAUtils.pick(SystemTables.NOM_SYL) + MAUtils.pick(SystemTables.NOM_FIN)
@@ -309,6 +310,20 @@ func peut_amarrer() -> bool:
 		if c["type"] == "planète" or c["type"] == "station":
 			return true
 	return false
+
+func cours_dict() -> Dictionary:
+	var def := {"A": 1.0, "B": 1.0, "C": 1.0}
+	if est_relais:
+		return def
+	for c in corps:
+		var cours: String = str(c.get("cours", ""))
+		if c.get("habitee", false) and cours.contains("A :"):
+			var re := RegEx.new()
+			re.compile("([ABC]) : ([0-9]+(?:[.,][0-9]+)?)")
+			for m in re.search_all(cours):
+				def[m.get_string(1)] = float(m.get_string(2).replace(",", "."))
+			return def
+	return def
 
 static func assurer_planete(s: StarSystem, nom: String) -> void:
 	for c in s.corps:

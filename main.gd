@@ -2,7 +2,8 @@ class_name Main
 extends Control
 
 const POSTS := ["Pilote", "Vigie", "Ingénieur", "Canonnier", "Fusilier", "Cartographe / Historien"]
-const TAB_RECRUTER := 4
+const TAB_COMMERCE := 4
+const TAB_RECRUTER := 5
 
 const SHIP_NAMES := ["La Guigne", "Black Pearl", "Vengeance", "L'Étoile Filante", "La Sirène", "Jolly Roger", "Faucon Noir", "La Glorieuse", "Mauvaise Fortune", "L'Épervier", "La Comète Noire", "Santa Maria"]
 
@@ -24,7 +25,9 @@ var galaxy_map: GalaxyMap
 var system_map: SystemMap
 var crew_panel: CrewPanel
 var ship_panel: ShipPanel
+var shop_panel: ShopPanel
 var recruit_panel: RecruitPanel
+var marchandage_mod := 1.0
 var posts_container: VBoxContainer
 var ship_name_label: Label
 var credits_label: Label
@@ -98,7 +101,8 @@ func _build_tabs() -> void:
 	tabs.set_tab_title(1, "Carte de système")
 	tabs.set_tab_title(2, "Équipage")
 	tabs.set_tab_title(3, "Vaisseau")
-	tabs.set_tab_title(4, "Recruter")
+	tabs.set_tab_title(4, "Commerce")
+	tabs.set_tab_title(5, "Recruter")
 
 	var tab_g: Control = tabs.get_child(0)
 	var hb := HBoxContainer.new()
@@ -161,10 +165,16 @@ func _build_tabs() -> void:
 	ship_panel = ShipPanel.new()
 	ship_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(3).add_child(ship_panel)
+	ship_panel.sell_requested.connect(_on_sell)
+
+	shop_panel = ShopPanel.new()
+	shop_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tabs.get_child(4).add_child(shop_panel)
+	shop_panel.buy_requested.connect(_on_buy)
 
 	recruit_panel = RecruitPanel.new()
 	recruit_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tabs.get_child(4).add_child(recruit_panel)
+	tabs.get_child(5).add_child(recruit_panel)
 	recruit_panel.recruit_found.connect(_on_recruit_found)
 	recruit_panel.recruit_hired.connect(_on_recruit_hired)
 
@@ -199,6 +209,7 @@ func get_system(cell: Vector2i) -> StarSystem:
 	elif named != null and named["type"] == "relais":
 		s = StarSystem.generate(GalaxyData.letter_symbol(cell.x), cell.y, {"nom": named["nom"]})
 		StarSystem.assurer_station(s, named["nom"])
+		s.est_relais = true
 	else:
 		var opts := {}
 		if named != null:
@@ -209,6 +220,77 @@ func get_system(cell: Vector2i) -> StarSystem:
 
 func docked() -> bool:
 	return current_system != null and current_system.peut_amarrer()
+
+func soute_used() -> float:
+	var u := 0.0
+	for k in ship.cargaison.keys():
+		u += ShopTables.place_de(k) * float(ship.cargaison[k])
+	return u
+
+func cours_actuel() -> Dictionary:
+	if current_system != null:
+		return current_system.cours_dict()
+	return {"A": 1.0, "B": 1.0, "C": 1.0}
+
+func cours_txt() -> String:
+	var c := cours_actuel()
+	return "A ×%s · B ×%s · C ×%s" % [MAUtils.fmt_num(c["A"]), MAUtils.fmt_num(c["B"]), MAUtils.fmt_num(c["C"])]
+
+func radix_unit_price() -> float:
+	return ship.tonnage * (1.5 if current_system != null and current_system.est_relais else 0.75)
+
+func _on_buy(it: Dictionary) -> void:
+	var prix := int(it["prix"])
+	var place: float = float(it["place"])
+	if not docked():
+		shop_panel.set_message("Commerce indisponible hors planète/station-relais.")
+		return
+	if credits < prix:
+		shop_panel.set_message("Crédits insuffisants pour %s (%s ¤)." % [it["nom"], MAUtils.fmt_int(prix)])
+		return
+	if soute_used() + place > ship.soute + 0.0001:
+		shop_panel.set_message("Plus de place en soute pour %s." % it["nom"])
+		return
+	credits -= prix
+	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + 1
+	if it["nom"] == "Ration":
+		ship.rations = int(ship.cargaison["Ration"])
+	shop_panel.set_message("Acheté : %s pour %s ¤ (en soute)." % [it["nom"], MAUtils.fmt_int(prix)])
+	refresh_all()
+
+func _on_sell(nom: String) -> void:
+	if not docked():
+		ship_panel.set_message("Vente indisponible hors planète/station-relais.")
+		return
+	if not ship.cargaison.has(nom) or int(ship.cargaison[nom]) <= 0:
+		return
+	var prix := ship_panel.prix_vente_unit(nom)
+	credits += prix
+	ship.cargaison[nom] = int(ship.cargaison[nom]) - 1
+	if int(ship.cargaison[nom]) <= 0:
+		ship.cargaison.erase(nom)
+	if nom == "Ration":
+		ship.rations = int(ship.cargaison.get("Ration", 0))
+	ship_panel.set_message("Vendu : 1 × %s pour %s ¤." % [nom, MAUtils.fmt_int(prix)])
+	refresh_all()
+
+func _test_marchandage() -> String:
+	if captain == null:
+		marchandage_mod = 1.0
+		return "Pas de capitaine : marchandage non testé (×1,00)."
+	var r := Dice.test(captain.get_comp("Commerce"), 1)
+	var m := Dice.test(3, 1)
+	var mod := 1.0
+	var txt := ""
+	if r["succ"] >= m["succ"]:
+		mod = 1.0 + 0.05 * maxi(0, r["succ"] - m["succ"])
+		txt = "le capitaine remporte l'opposition (vendeur)"
+	else:
+		mod = 1.0 - 0.05 * maxi(0, m["succ"] - r["succ"])
+		txt = "le marchand remporte l'opposition (acheteur)"
+	mod = clampf(mod, 0.5, 1.5)
+	marchandage_mod = mod
+	return "Marchandage à l'arrivée — Commerce du capitaine %s : %s contre marchand %s : %s → prix de vente ×%s (plafonds 50 %%–150 %% du prix de base)." % [captain.nom, Dice.fmt_jet(r), Dice.fmt_jet(m), txt, MAUtils.fmt_num(mod)]
 
 func nb_posts() -> int:
 	return mini(POSTS.size(), ship.equipage_postes)
@@ -349,6 +431,7 @@ func _update_info_label() -> void:
 
 func _update_buttons() -> void:
 	var dk := docked()
+	tabs.set_tab_disabled(TAB_COMMERCE, not dk)
 	tabs.set_tab_disabled(TAB_RECRUTER, not dk)
 	plein_button.disabled = not dk or ship.radix_pc >= ship.autonomie_pc
 	calc_button.disabled = destination.x < 0 or not can_travel()
@@ -384,7 +467,7 @@ func _on_faire_le_plein() -> void:
 	if missing <= 0:
 		msg_label.text = "La réserve de Radix est déjà pleine."
 		return
-	var unit_price: float = ship.tonnage * 0.75
+	var unit_price: float = radix_unit_price()
 	var blocks := int(ceil(missing / 1000.0))
 	var cost := int(round(blocks * unit_price))
 	if credits >= cost:
@@ -424,25 +507,37 @@ func _on_calc_voyage() -> void:
 		"tonnage": ship.tonnage,
 		"radix_reserve": ship.radix_pc,
 		"myst": dest_sys.route == "Mystérieux",
+		"pieces": int(ship.cargaison.get("Pièces détachées (1 kg)", 0)),
 	}
 	var res := TravelSim.simulate(cfg)
 	if res["suivi_reserve"]:
 		ship.radix_pc = int(round(res["reserve"]))
 	ship.rations = maxi(0, ship.rations - res["resume"]["rations"])
-	ship.cargaison["Rations"] = ship.rations
+	ship.cargaison["Ration"] = ship.rations
+	var pieces_used: int = res["resume"].get("pieces_used", 0)
+	if pieces_used > 0:
+		var dispo: int = int(ship.cargaison.get("Pièces détachées (1 kg)", 0))
+		ship.cargaison["Pièces détachées (1 kg)"] = maxi(0, dispo - pieces_used)
+		if int(ship.cargaison["Pièces détachées (1 kg)"]) == 0:
+			ship.cargaison.erase("Pièces détachées (1 kg)")
 	var sal: int = salaire_jour() * int(res["jours_count"])
 	credits = maxi(0, credits - sal)
 	for deg in res["resume"]["degats"]:
 		if str(deg).contains("PC"):
 			continue
 		ship.subir_degats(str(deg))
-	_render_journal(res, dest_sys, sal)
+	var ligne_march := ""
+	if res["arrivee"] and dest_sys.peut_amarrer():
+		ligne_march = _test_marchandage()
+	_render_journal(res, dest_sys, sal, ligne_march)
 	if res["arrivee"]:
 		current_pos = destination
 		current_system = dest_sys
 		if not galaxy_map.explored.has(destination):
 			galaxy_map.explored.append(destination)
 		msg_label.text = "Arrivé à %s (%s)." % [dest_sys.nom, GalaxyData.coord_label(destination.x, destination.y)]
+		if ligne_march != "":
+			msg_label.text += " " + ligne_march
 	elif res["a_sec"] and res["case_finale"] != null:
 		current_pos = res["case_finale"]
 		current_system = get_system(current_pos)
@@ -454,7 +549,7 @@ func _on_calc_voyage() -> void:
 	galaxy_map.destination = destination
 	refresh_all()
 
-func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int) -> void:
+func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, ligne_march := "") -> void:
 	var dep: Vector2i = res["cfg"]["dep"]
 	var arr: Vector2i = res["cfg"]["arr"]
 	var bb := "[b][color=gold]Voyage : %s → %s[/color][/b]\n" % [GalaxyData.coord_label(dep.x, dep.y), GalaxyData.coord_label(arr.x, arr.y)]
@@ -487,6 +582,10 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int) -> v
 	if T["rations"] > 0 and ship.rations == 0:
 		bb += "[color=ff5544]Famine à bord : les rations sont épuisées ![/color]\n"
 	bb += "Salaires de l'équipage : %d ¤/jour × %d jour(s) = %s ¤ — crédits restants : %s ¤\n" % [salaire_jour(), res["jours_count"], MAUtils.fmt_int(sal_total), MAUtils.fmt_int(credits)]
+	if int(T.get("pieces_used", 0)) > 0:
+		bb += "Pièces détachées consommées (réparations) : %d — reste en soute : %s\n" % [int(T["pieces_used"]), MAUtils.fmt_int(int(ship.cargaison.get("Pièces détachées (1 kg)", 0)))]
+	if ligne_march != "":
+		bb += "[color=gold]" + ligne_march + "[/color]\n"
 	bb += "Bonus de pilotage gagnés : +%s PC\n" % MAUtils.fmt_num(T["bonus"])
 	journal.text = bb
 
@@ -530,5 +629,16 @@ func refresh_all() -> void:
 	galaxy_map.current_pos = current_pos
 	galaxy_map.queue_redraw()
 	travel_info_label.text = "Radix : %s / %s PC · Vitesse : %d PC/j" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), ship.vitesse_hyper_pc_j]
+	var dk := docked()
+	var items: Array
+	var titre: String
+	if current_system != null and current_system.est_relais:
+		items = ShopTables.STATION_RELAIS
+		titre = "Commerce — station-relais %s (tarifs du comptoir OCG, GdM p125)" % current_system.nom
+	else:
+		items = ShopTables.CATALOGUE
+		titre = "Commerce — planète %s (catalogue MdJ p234-243)" % (current_system.nom if current_system != null else "?")
+	shop_panel.set_catalog(items, titre, credits, soute_used(), ship.soute, dk, cours_txt())
+	ship_panel.set_context(cours_actuel(), marchandage_mod, dk, radix_unit_price())
 	_update_info_label()
 	_update_buttons()

@@ -56,7 +56,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 		"reserve_init": cfg.get("radix_reserve", 0),
 		"jour_sec": 0, "heures_fin": 0.0, "case_finale": null,
 		"saut": null,
-		"resume": {"bonus": 0.0, "perils": [], "evites": 0, "subis": 0, "degats": [], "radix_pc": 0.0, "rations": 0, "releves": 0, "retards": 0, "majeurs": [], "pannes": 0, "reparees": 0, "eau_pct": 0.0, "cases_relees": []},
+		"resume": {"bonus": 0.0, "perils": [], "evites": 0, "subis": 0, "degats": [], "radix_pc": 0.0, "rations": 0, "releves": 0, "retards": 0, "majeurs": [], "pannes": 0, "reparees": 0, "eau_pct": 0.0, "cases_relees": [], "pieces_used": 0},
 	}
 	var T: Dictionary = res["resume"]
 	var proba := route_proba(cfg.get("route_key", "x"))
@@ -65,6 +65,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 	var delay := 0
 	var num := 0
 	var pannes: Array = []
+	var pieces := int(cfg.get("pieces", 0))
 	var geo = cfg.get("dep", null) != null and cfg.get("arr", null) != null
 	var saut_use := false
 
@@ -109,8 +110,15 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 
 		for i in range(pannes.size() - 1, -1, -1):
 			var p: Dictionary = pannes[i]
-			var r := Dice.test(ig, p["d"], "TD" if p.get("td", false) else "normal")
 			var spec := "Ingénierie (%d%s)" % [p["d"], ", TD" if p.get("td", false) else ""]
+			var r: Dictionary
+			if pieces > 0:
+				pieces -= 1
+				T["pieces_used"] += 1
+				r = Dice.test(ig, p["d"], "TD" if p.get("td", false) else "normal")
+			else:
+				r = {"ok": false, "succ": 0, "extra": 0, "dice": [], "mode": "normal"}
+				j["lignes"].append("Réparation de la « %s » impossible : plus de pièces détachées en soute." % p["nom"])
 			if r["ok"]:
 				j["lignes"].append("Réparation de la « %s » (Ingénieur, %s) : %s : réussie, la panne est terminée." % [p["nom"], spec, Dice.fmt_jet(r)])
 				T["reparees"] += 1
@@ -239,14 +247,21 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 					T["pannes"] += 1
 					var rd: int = P["repar"]["d"]
 					var rtd: bool = P["repar"].get("td", false)
-					var r := Dice.test(ig, rd, "TD" if rtd else "normal")
 					var spec := "Ingénierie (%d%s)" % [rd, ", TD" if rtd else ""]
+					var r: Dictionary
+					var sans_pieces := pieces <= 0
+					if not sans_pieces:
+						pieces -= 1
+						T["pieces_used"] += 1
+						r = Dice.test(ig, rd, "TD" if rtd else "normal")
+					else:
+						r = {"ok": false, "succ": 0, "extra": 0, "dice": [], "mode": "normal"}
 					if r["ok"]:
 						pl["issue"] = "Réparée le soir même par l'Ingénieur (%s, %s)." % [spec, Dice.fmt_jet(r)]
 						T["reparees"] += 1
 					else:
 						pannes.append({"key": t["key"], "nom": P["n"], "eff": P.get("eff", ""), "d": rd, "td": rtd, "eau": P.get("eau", false), "jours": 0})
-						pl["issue"] = "Non réparée (%s, %s) : la panne persiste." % [spec, Dice.fmt_jet(r)]
+						pl["issue"] = ("Réparation impossible, plus de pièces détachées en soute (%s) : la panne persiste." if sans_pieces else "Non réparée (%s, %s) : la panne persiste.") % ([spec] if sans_pieces else [spec, Dice.fmt_jet(r)])
 						if t["key"] == "pNavI" and r["succ"] == 0:
 							pl["issue"] += " De plus, le navordinateur efface la carte du système."
 				if P.get("majeur", false):
