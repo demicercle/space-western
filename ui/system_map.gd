@@ -7,6 +7,7 @@ class MapCanvas extends Control:
 	var sys: StarSystem
 	var selected_body: Variant = null
 	var ship_orbite := -1.0
+	var ship_angle := 0.0
 	signal body_hit(body: Dictionary)
 
 	func _center() -> Vector2:
@@ -24,8 +25,7 @@ class MapCanvas extends Control:
 		return _center() + Vector2(cos(ang), sin(ang)) * _r_of(float(body["orbite"]))
 
 	func ship_pos() -> Vector2:
-		var ang := -PI * 0.5 + 0.9
-		return _center() + Vector2(cos(ang), sin(ang)) * _r_of(ship_orbite)
+		return _center() + Vector2(cos(ship_angle), sin(ship_angle)) * _r_of(ship_orbite)
 
 	func _gui_input(event: InputEvent) -> void:
 		if sys == null:
@@ -84,6 +84,7 @@ var sys_msg: Label
 var sys: StarSystem
 var selected_body: Variant = null
 var ship_orbite := -1.0
+var ship_angle := 0.0
 var ship_body: Variant = null
 
 func _ready() -> void:
@@ -148,10 +149,12 @@ func set_system(s: StarSystem) -> void:
 	canvas.queue_redraw()
 	_render_details()
 
-func set_ship_pos(o: float, body: Variant) -> void:
+func set_ship_pos(o: float, angle: float, body: Variant) -> void:
 	ship_orbite = o
+	ship_angle = angle
 	ship_body = body
 	canvas.ship_orbite = o
+	canvas.ship_angle = angle
 	canvas.queue_redraw()
 	_render_details()
 
@@ -163,7 +166,11 @@ func _body_bb(body: Dictionary) -> String:
 	if body.get("description", "") != "":
 		bb += "    [i]%s[/i]\n" % body["description"]
 	if ship_orbite >= 0.0:
-		bb += "    Distance depuis le vaisseau : %s US\n" % MAUtils.fmt_num(absf(float(body["orbite"]) - ship_orbite))
+		var r1 := ship_orbite
+		var r2 := float(body["orbite"])
+		var a2 := sys.angle_corps(body)
+		var d := sqrt(maxf(0.0, r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * cos(a2 - ship_angle)))
+		bb += "    Distance depuis le vaisseau : %s US\n" % MAUtils.fmt_num(d)
 	return bb
 
 func _render_details() -> void:

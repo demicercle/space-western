@@ -72,11 +72,10 @@ func _ready() -> void:
 	vb2.add_child(hold_list)
 
 func prix_vente_unit(nom: String) -> int:
-	var base := ShopTables.prix_catalogue(nom)
-	var dispo := ShopTables.dispo_catalogue(nom)
-	var f: float = cours.get(dispo, 1.0)
-	var p := base * f * marchandage_mod
-	return maxi(1, int(round(p)))
+	return ShopTables.prix_vente(nom, cours, marchandage_mod)
+
+func prix_base(nom: String) -> int:
+	return ShopTables.prix_vente(nom, {"A": 1.0, "B": 1.0, "C": 1.0}, 1.0)
 
 func set_context(p_cours: Dictionary, p_mod: float, p_docked: bool, p_radix_price: float) -> void:
 	cours = p_cours
@@ -133,15 +132,16 @@ func set_ship(s: Ship) -> void:
 	for k in keys:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
+		var pv := prix_vente_unit(k)
 		var lbl := Label.new()
 		lbl.size_flags_horizontal = SIZE_EXPAND_FILL
-		lbl.text = "%s ×%d — vente : %s €/u (base %s €, %s UC)" % [k, s.cargaison[k], MAUtils.fmt_int(prix_vente_unit(k)), MAUtils.fmt_int(ShopTables.prix_catalogue(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
+		lbl.text = "%s ×%d — vente : %s (base %s €, %s UC)" % [k, s.cargaison[k], ("invendable ici (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv)), MAUtils.fmt_int(prix_base(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
 		lbl.add_theme_font_size_override("font_size", 12)
 		row.add_child(lbl)
 		var btn := Button.new()
 		btn.text = "Vendre"
-		btn.disabled = not docked
-		btn.tooltip_text = "Vendre 1 unité au prix marchandé" if docked else "Vente indisponible hors planète/station-relais"
+		btn.disabled = not docked or pv <= 0
+		btn.tooltip_text = "Vendre 1 unité au prix marchandé" if (docked and pv > 0) else ("Invendable ici (cours ×0)" if docked else "Vente indisponible hors planète/station-relais")
 		btn.pressed.connect(_on_sell.bind(k))
 		row.add_child(btn)
 		hold_list.add_child(row)

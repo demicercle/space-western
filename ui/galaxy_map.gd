@@ -33,6 +33,9 @@ func _geo_f(key: String) -> float:
 func _geo_n() -> int:
 	return int(GalaxyData.MAP_GEO["n"])
 
+func cell_center(col: int, row: int) -> Vector2:
+	return _cell_center(col, row)
+
 func _cell_center(col: int, row: int) -> Vector2:
 	var n: int = _geo_n()
 	var ix := (_geo_f("x0") + (col - 0.5) * _geo_f("pas_x")) * _scale + _origin.x

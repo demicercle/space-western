@@ -83,14 +83,13 @@ static func _anomalie(temp: String):
 static func _gen_cours(commerce: String) -> String:
 	if commerce == "Planète primitive":
 		return "aucun comptoir OCG : pas de cours établi"
-	var base := 1.0
-	if commerce == "Carrefour galactique" or commerce == "Carrefour commercial":
-		base = 0.5
-	elif commerce == "Planète pauvre":
-		base = 1.5
-	var jit := func(): return MAUtils.pick([0.0, 0.0, 0.5])
-	var f := func(v: float) -> String: return MAUtils.fmt_num(clampf(base + v, 0.5, 2.0))
-	return "A : %s · B : %s · C : %s (0 : impossible · 0,5 : facile · 2 : très rare et cher)" % [f.call(0.5 + jit.call()), f.call(jit.call()), f.call(-0.5 + jit.call())]
+	var pick_c := func() -> float:
+		if commerce == "Carrefour galactique" or commerce == "Carrefour commercial":
+			return MAUtils.pick([1.0, 1.5, 2.0])
+		if commerce == "Planète pauvre":
+			return MAUtils.pick([0.0, 0.5, 1.0, 1.5])
+		return MAUtils.wpick([[0.0, 1], [0.5, 2], [1.0, 4], [1.5, 2], [2.0, 1]])
+	return "A : %s · B : %s · C : %s (0 : introuvable/invendable)" % [MAUtils.fmt_num(pick_c.call()), MAUtils.fmt_num(pick_c.call()), MAUtils.fmt_num(pick_c.call())]
 
 static func _gen_illegal() -> String:
 	var options := ["drogues", "esclaves", "vaisseaux militaires", "vaisseaux courants", "vaisseaux de plaisance", "technologie militaire", "technologie courante", "technologie spatiale"]
@@ -304,6 +303,9 @@ static func generate(quad_x: String, quad_y: int, opts := {}) -> StarSystem:
 
 func coord_txt() -> String:
 	return "%s-%d" % [quad_x, quad_y]
+
+func angle_corps(c: Dictionary) -> float:
+	return float(corps.find(c)) * 2.399 + float(c["orbite"]) * 0.7
 
 func peut_amarrer() -> bool:
 	for c in corps:
