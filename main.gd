@@ -246,7 +246,7 @@ func _on_buy(it: Dictionary) -> void:
 		shop_panel.set_message("Commerce indisponible hors planète/station-relais.")
 		return
 	if credits < prix:
-		shop_panel.set_message("Crédits insuffisants pour %s (%s ¤)." % [it["nom"], MAUtils.fmt_int(prix)])
+		shop_panel.set_message("Crédits insuffisants pour %s (%s €)." % [it["nom"], MAUtils.fmt_int(prix)])
 		return
 	if soute_used() + place > ship.soute + 0.0001:
 		shop_panel.set_message("Plus de place en soute pour %s." % it["nom"])
@@ -255,7 +255,7 @@ func _on_buy(it: Dictionary) -> void:
 	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + 1
 	if it["nom"] == "Ration":
 		ship.rations = int(ship.cargaison["Ration"])
-	shop_panel.set_message("Acheté : %s pour %s ¤ (en soute)." % [it["nom"], MAUtils.fmt_int(prix)])
+	shop_panel.set_message("Acheté : %s pour %s € (en soute)." % [it["nom"], MAUtils.fmt_int(prix)])
 	refresh_all()
 
 func _on_sell(nom: String) -> void:
@@ -271,7 +271,7 @@ func _on_sell(nom: String) -> void:
 		ship.cargaison.erase(nom)
 	if nom == "Ration":
 		ship.rations = int(ship.cargaison.get("Ration", 0))
-	ship_panel.set_message("Vendu : 1 × %s pour %s ¤." % [nom, MAUtils.fmt_int(prix)])
+	ship_panel.set_message("Vendu : 1 × %s pour %s €." % [nom, MAUtils.fmt_int(prix)])
 	refresh_all()
 
 func _test_marchandage() -> String:
@@ -473,16 +473,16 @@ func _on_faire_le_plein() -> void:
 	if credits >= cost:
 		ship.radix_pc = ship.autonomie_pc
 		credits -= cost
-		msg_label.text = "Plein effectué : +%s PC pour %s ¤." % [MAUtils.fmt_int(missing), MAUtils.fmt_int(cost)]
+		msg_label.text = "Plein effectué : +%s PC pour %s €." % [MAUtils.fmt_int(missing), MAUtils.fmt_int(cost)]
 	else:
 		var afford := int(credits / unit_price)
 		if afford <= 0:
-			msg_label.text = "Crédits insuffisants pour acheter du Radix (%s ¤/1 000 PC)." % MAUtils.fmt_num(unit_price)
+			msg_label.text = "Crédits insuffisants pour acheter du Radix (%s €/1 000 PC)." % MAUtils.fmt_num(unit_price)
 			return
 		var add := afford * 1000
 		ship.radix_pc += add
 		credits -= int(round(afford * unit_price))
-		msg_label.text = "Plein partiel : +%s PC pour %s ¤." % [MAUtils.fmt_int(add), MAUtils.fmt_int(afford * unit_price)]
+		msg_label.text = "Plein partiel : +%s PC pour %s €." % [MAUtils.fmt_int(add), MAUtils.fmt_int(afford * unit_price)]
 	refresh_all()
 
 func _on_calc_voyage() -> void:
@@ -581,7 +581,7 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, lign
 	bb += "Radix consommé : %s PC (réserve restante : %s / %s PC) · Rations consommées : %d (reste %d)\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), T["rations"], ship.rations]
 	if T["rations"] > 0 and ship.rations == 0:
 		bb += "[color=ff5544]Famine à bord : les rations sont épuisées ![/color]\n"
-	bb += "Salaires de l'équipage : %d ¤/jour × %d jour(s) = %s ¤ — crédits restants : %s ¤\n" % [salaire_jour(), res["jours_count"], MAUtils.fmt_int(sal_total), MAUtils.fmt_int(credits)]
+	bb += "Salaires de l'équipage : %d €/jour × %d jour(s) = %s € — crédits restants : %s €\n" % [salaire_jour(), res["jours_count"], MAUtils.fmt_int(sal_total), MAUtils.fmt_int(credits)]
 	if int(T.get("pieces_used", 0)) > 0:
 		bb += "Pièces détachées consommées (réparations) : %d — reste en soute : %s\n" % [int(T["pieces_used"]), MAUtils.fmt_int(int(ship.cargaison.get("Pièces détachées (1 kg)", 0)))]
 	if ligne_march != "":
@@ -601,7 +601,7 @@ func _on_recruit_hired(c: Character) -> void:
 		recruit_panel.set_message("Le vaisseau est plein (%d/%d)." % [characters.size(), ship.passagers_max])
 		return
 	if credits < c.prix_recrutement:
-		recruit_panel.set_message("Crédits insuffisants (%s ¤ requis)." % MAUtils.fmt_int(c.prix_recrutement))
+		recruit_panel.set_message("Crédits insuffisants (%s € requis)." % MAUtils.fmt_int(c.prix_recrutement))
 		return
 	credits -= c.prix_recrutement
 	c.post_index = -1
@@ -610,12 +610,12 @@ func _on_recruit_hired(c: Character) -> void:
 	if captain == null:
 		captain = c
 	recruit_panel.clear_recrue()
-	recruit_panel.set_message("%s rejoint l'équipage pour %s ¤ (salaire %d ¤/jour). Premier personnage = capitaine." % [c.nom, MAUtils.fmt_int(c.prix_recrutement), c.prix_journalier])
+	recruit_panel.set_message("%s rejoint l'équipage pour %s € (salaire %d €/jour). Premier personnage = capitaine." % [c.nom, MAUtils.fmt_int(c.prix_recrutement), c.prix_journalier])
 	refresh_all()
 
 func refresh_all() -> void:
 	ship_name_label.text = "Vaisseau : %s (%s) — %s" % [ship.nom, ship.modele, GalaxyData.coord_label(current_pos.x, current_pos.y)]
-	credits_label.text = "Crédits : %s ¤" % MAUtils.fmt_int(credits)
+	credits_label.text = "Crédits : %s €" % MAUtils.fmt_int(credits)
 	captain_label.text = "Capitaine : %s" % (captain.nom if captain != null else "—")
 	for c in characters:
 		if char_tokens.has(c):

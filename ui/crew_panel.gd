@@ -56,7 +56,7 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	post.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
 	vb2.add_child(post)
 	var pr := Label.new()
-	pr.text = "Salaire : %d ¤/jour · Recrutement : %d ¤" % [c.prix_journalier, c.prix_recrutement]
+	pr.text = "Salaire : %d €/jour · Recrutement : %d €" % [c.prix_journalier, c.prix_recrutement]
 	pr.add_theme_font_size_override("font_size", 11)
 	pr.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
 	vb2.add_child(pr)

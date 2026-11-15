@@ -5,13 +5,28 @@ signal buy_requested(item: Dictionary)
 
 var title_label: Label
 var info_label: Label
-var list_box: VBoxContainer
+var grid: GridContainer
 var msg_label: Label
 var items: Array = []
 var credits := 0
 var soute_used := 0.0
 var soute_max := 25.0
 var docked := false
+
+static var _re_us := RegEx.create_from_string("\\bUS\\b")
+static var _re_spaces := RegEx.create_from_string(" {2,}")
+static var _re_empty_par := RegEx.create_from_string("\\(\\s*\\)")
+
+static func _desc_txt(it: Dictionary) -> String:
+	var d := str(it.get("note", ""))
+	d = _re_us.sub(d, "", true)
+	d = _re_spaces.sub(d, " ", true)
+	d = _re_empty_par.sub(d, "", true)
+	d = d.strip_edges()
+	var meta := "Dispo %s · %s UC" % [str(it.get("dispo", "?")), MAUtils.fmt_num(float(it.get("place", 0.0)))]
+	if d == "":
+		return meta
+	return d + " — " + meta
 
 func _ready() -> void:
 	var vb := VBoxContainer.new()
@@ -32,10 +47,19 @@ func _ready() -> void:
 	msg_label.add_theme_font_size_override("font_size", 12)
 	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	vb.add_child(msg_label)
-	list_box = VBoxContainer.new()
-	list_box.add_theme_constant_override("separation", 4)
-	list_box.size_flags_horizontal = SIZE_EXPAND_FILL
-	vb.add_child(list_box)
+	grid = GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 5)
+	grid.size_flags_horizontal = SIZE_EXPAND_FILL
+	vb.add_child(grid)
+
+func _header_cell(txt: String) -> Label:
+	var l := Label.new()
+	l.text = txt
+	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
+	return l
 
 func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: float, p_soute_max: float, p_docked: bool, cours_txt: String) -> void:
 	items = p_items
@@ -44,21 +68,36 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	soute_max = p_soute_max
 	docked = p_docked
 	title_label.text = titre
-	info_label.text = "Crédits : %s ¤ · Soute : %s / %s UC%s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), (" · Cours : " + cours_txt) if cours_txt != "" else "", "" if docked else " · (commerce indisponible hors planète/station-relais)"]
-	for ch in list_box.get_children():
-		list_box.remove_child(ch)
+	info_label.text = "Crédits : %s € · Soute : %s / %s UC%s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), (" · Cours : " + cours_txt) if cours_txt != "" else "", "" if docked else " · (commerce indisponible hors planète/station-relais)"]
+	for ch in grid.get_children():
+		grid.remove_child(ch)
 		ch.queue_free()
+	grid.add_child(_header_cell("Objet"))
+	grid.add_child(_header_cell("Description"))
+	grid.add_child(_header_cell("Prix"))
 	for it in items:
-		var row := PanelContainer.new()
-		var hb := HBoxContainer.new()
-		hb.add_theme_constant_override("separation", 10)
-		row.add_child(hb)
-		var txt := Label.new()
-		txt.size_flags_horizontal = SIZE_EXPAND_FILL
-		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		txt.text = "%s — %s ¤ (dispo %s, %s UC)%s" % [it["nom"], MAUtils.fmt_int(it["prix"]), it["dispo"], MAUtils.fmt_num(it["place"]), ("\n" + it["note"]) if str(it.get("note", "")) != "" else ""]
-		txt.add_theme_font_size_override("font_size", 12)
-		hb.add_child(txt)
+		var nom_l := Label.new()
+		nom_l.text = str(it["nom"])
+		nom_l.custom_minimum_size = Vector2(230, 0)
+		nom_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		nom_l.add_theme_font_size_override("font_size", 12)
+		grid.add_child(nom_l)
+		var desc_l := Label.new()
+		desc_l.text = _desc_txt(it)
+		desc_l.size_flags_horizontal = SIZE_EXPAND_FILL
+		desc_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_l.add_theme_font_size_override("font_size", 11)
+		desc_l.add_theme_color_override("font_color", Color(0.75, 0.78, 0.85))
+		grid.add_child(desc_l)
+		var cell := HBoxContainer.new()
+		cell.add_theme_constant_override("separation", 8)
+		cell.custom_minimum_size = Vector2(190, 0)
+		var prix_l := Label.new()
+		prix_l.text = "%s €" % MAUtils.fmt_int(int(it["prix"]))
+		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
+		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		prix_l.add_theme_font_size_override("font_size", 12)
+		cell.add_child(prix_l)
 		var btn := Button.new()
 		btn.text = "Acheter"
 		var trop_cher := credits < int(it["prix"])
@@ -69,8 +108,8 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		elif plus_de_place:
 			btn.tooltip_text = "Plus de place en soute"
 		btn.pressed.connect(_on_buy.bind(it))
-		hb.add_child(btn)
-		list_box.add_child(row)
+		cell.add_child(btn)
+		grid.add_child(cell)
 
 func _on_buy(it: Dictionary) -> void:
 	buy_requested.emit(it)

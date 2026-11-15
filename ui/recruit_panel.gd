@@ -87,7 +87,7 @@ func show_recrue(c: Character) -> void:
 		ch.queue_free()
 	card_holder.add_child(CrewPanel.make_card(c, false))
 	var price := Label.new()
-	price.text = "Prix de recrutement : %s ¤ (5 × salaire journalier de %s ¤/jour)" % [MAUtils.fmt_int(c.prix_recrutement), MAUtils.fmt_int(c.prix_journalier)]
+	price.text = "Prix de recrutement : %s € (5 × salaire journalier de %s €/jour)" % [MAUtils.fmt_int(c.prix_recrutement), MAUtils.fmt_int(c.prix_journalier)]
 	price.add_theme_font_size_override("font_size", 13)
 	price.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
 	card_holder.add_child(price)
@@ -112,6 +112,6 @@ func set_enabled_state(docked: bool, credits: int, crew_size: int, crew_max: int
 	elif crew_size >= crew_max:
 		set_message("Le vaisseau est plein (%d/%d)." % [crew_size, crew_max])
 	elif recrue != null and credits < recrue.prix_recrutement:
-		set_message("Crédits insuffisants pour recruter %s (%s ¤ requis)." % [recrue.nom, MAUtils.fmt_int(recrue.prix_recrutement)])
+		set_message("Crédits insuffisants pour recruter %s (%s € requis)." % [recrue.nom, MAUtils.fmt_int(recrue.prix_recrutement)])
 	else:
 		set_message("")

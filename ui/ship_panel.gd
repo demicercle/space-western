@@ -1,5 +1,5 @@
 class_name ShipPanel
-extends ScrollContainer
+extends HBoxContainer
 
 signal sell_requested(nom: String)
 
@@ -14,16 +14,21 @@ var radix_unit_price := 75.0
 var ship: Ship
 
 func _ready() -> void:
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 12)
-	hb.size_flags_horizontal = SIZE_EXPAND_FILL
-	add_child(hb)
+	add_theme_constant_override("separation", 12)
+	size_flags_horizontal = SIZE_EXPAND_FILL
+	size_flags_vertical = SIZE_EXPAND_FILL
 	var p1 := PanelContainer.new()
 	p1.size_flags_horizontal = SIZE_EXPAND_FILL
+	p1.size_flags_vertical = SIZE_EXPAND_FILL
 	p1.custom_minimum_size = Vector2(430, 0)
-	hb.add_child(p1)
+	add_child(p1)
+	var sc1 := ScrollContainer.new()
+	sc1.size_flags_horizontal = SIZE_EXPAND_FILL
+	sc1.size_flags_vertical = SIZE_EXPAND_FILL
+	p1.add_child(sc1)
 	var vb1 := VBoxContainer.new()
-	p1.add_child(vb1)
+	vb1.size_flags_horizontal = SIZE_EXPAND_FILL
+	sc1.add_child(vb1)
 	var t1 := Label.new()
 	t1.text = "Fiche du vaisseau"
 	t1.add_theme_font_size_override("font_size", 15)
@@ -31,15 +36,21 @@ func _ready() -> void:
 	vb1.add_child(t1)
 	sheet_label = RichTextLabel.new()
 	sheet_label.bbcode_enabled = true
+	sheet_label.fit_content = true
 	sheet_label.size_flags_horizontal = SIZE_EXPAND_FILL
-	sheet_label.size_flags_vertical = SIZE_EXPAND_FILL
 	vb1.add_child(sheet_label)
 	var p2 := PanelContainer.new()
 	p2.size_flags_horizontal = SIZE_EXPAND_FILL
+	p2.size_flags_vertical = SIZE_EXPAND_FILL
 	p2.custom_minimum_size = Vector2(360, 0)
-	hb.add_child(p2)
+	add_child(p2)
+	var sc2 := ScrollContainer.new()
+	sc2.size_flags_horizontal = SIZE_EXPAND_FILL
+	sc2.size_flags_vertical = SIZE_EXPAND_FILL
+	p2.add_child(sc2)
 	var vb2 := VBoxContainer.new()
-	p2.add_child(vb2)
+	vb2.size_flags_horizontal = SIZE_EXPAND_FILL
+	sc2.add_child(vb2)
 	var t2 := Label.new()
 	t2.text = "Soute et réserves"
 	t2.add_theme_font_size_override("font_size", 15)
@@ -47,6 +58,7 @@ func _ready() -> void:
 	vb2.add_child(t2)
 	hold_label = RichTextLabel.new()
 	hold_label.bbcode_enabled = true
+	hold_label.fit_content = true
 	hold_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	vb2.add_child(hold_label)
 	hold_msg = Label.new()
@@ -103,13 +115,13 @@ func set_ship(s: Ship) -> void:
 	bb += "Équipage standard : %d P + %d V + %d C + %d Me + %d Ma (%d)\n" % [eq.get("P", 0), eq.get("V", 0), eq.get("C", 0), eq.get("Me", 0), eq.get("Ma", 0), eq.get("total", 0)]
 	bb += "Passagers : %d cabine(s) + %d dortoir(s) (max %d)\n" % [s.passagers_cabines, s.passagers_dortoirs, s.passagers_max]
 	bb += "Soute : %s / %s UC\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute)]
-	bb += "Prix : %s ¤ · Origine : %s\n" % [MAUtils.fmt_int(s.prix), s.origine]
+	bb += "Prix : %s € · Origine : %s\n" % [MAUtils.fmt_int(s.prix), s.origine]
 	bb += "\n[b]Armement[/b]\n"
 	for a in s.armement:
 		bb += "  %s — %s (%s)\n" % [a["pos"], a["nom"], a["stats"]]
 	bb += "\n[b]Systèmes secondaires[/b] : " + (", ".join(s.systemes_secondaires) if s.systemes_secondaires.size() > 0 else "aucun") + "\n"
 	sheet_label.text = bb
-	var hb := "[b]Réserve de Radix[/b] : %s / %s PC — plein : %s ¤/1 000 PC (planète ×0,75, station-relais ×1,5 le tonnage ; ici %s ¤/1 000 PC)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_num(s.tonnage * 0.75), MAUtils.fmt_num(radix_unit_price)]
+	var hb := "[b]Réserve de Radix[/b] : %s / %s PC — plein : %s €/1 000 PC (planète ×0,75, station-relais ×1,5 le tonnage ; ici %s €/1 000 PC)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_num(s.tonnage * 0.75), MAUtils.fmt_num(radix_unit_price)]
 	hb += "[b]Rations[/b] : %d (1 par personne et par jour de voyage)\n" % s.rations
 	hb += "[b]Soute[/b] : %s / %s UC · cours de vente : A ×%s · B ×%s · C ×%s · marchandage ×%s%s\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute), MAUtils.fmt_num(cours.get("A", 1.0)), MAUtils.fmt_num(cours.get("B", 1.0)), MAUtils.fmt_num(cours.get("C", 1.0)), MAUtils.fmt_num(marchandage_mod), "" if docked else " (vente indisponible hors planète/station-relais)"]
 	hold_label.text = hb
@@ -123,7 +135,7 @@ func set_ship(s: Ship) -> void:
 		row.add_theme_constant_override("separation", 8)
 		var lbl := Label.new()
 		lbl.size_flags_horizontal = SIZE_EXPAND_FILL
-		lbl.text = "%s ×%d — vente : %s ¤/u (base %s ¤, %s UC)" % [k, s.cargaison[k], MAUtils.fmt_int(prix_vente_unit(k)), MAUtils.fmt_int(ShopTables.prix_catalogue(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
+		lbl.text = "%s ×%d — vente : %s €/u (base %s €, %s UC)" % [k, s.cargaison[k], MAUtils.fmt_int(prix_vente_unit(k)), MAUtils.fmt_int(ShopTables.prix_catalogue(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
 		lbl.add_theme_font_size_override("font_size", 12)
 		row.add_child(lbl)
 		var btn := Button.new()

@@ -45,7 +45,7 @@ static func galactic_basic(nom: String) -> Ship:
 	var s := Ship.new()
 	s.nom = nom
 	s.modele = "Galactic Basic"
-	s.description = "Le Basic est une grosse brique volante d'une trentaine de mètres de long. Sa coque, d'un gris triste, est bombée comme celle d'un bateau. Son pont supérieur est complètement plat et équipé d'une grande trappe d'accès à la soute. Son poste de pilotage ressemble à une coque d'œuf transparente et nervurée de métal. Exigu et fonctionnel, il offre un champ de vision presque circulaire au pilote et à la vigie. C'est dans son dos que se trouve la tourelle, dont l'habitacle est situé juste derrière le cockpit. À l'intérieur, une unique coursive relie les différentes parties du vaisseau, toutes plus exiguës les unes que les autres. Le Basic est un vaisseau de transport léger de catégorie C, le modèle le plus vendu, le plus volé et le plus utilisé de la Galaxie : son générateur, sa propulsion et son hyperpropulsion sont recyclés d'anciens appareils détruits. Il ne devrait coûter que 10 000 ¤, la barre psychologique du vaisseau le moins cher de la Galaxie."
+	s.description = "Le Basic est une grosse brique volante d'une trentaine de mètres de long. Sa coque, d'un gris triste, est bombée comme celle d'un bateau. Son pont supérieur est complètement plat et équipé d'une grande trappe d'accès à la soute. Son poste de pilotage ressemble à une coque d'œuf transparente et nervurée de métal. Exigu et fonctionnel, il offre un champ de vision presque circulaire au pilote et à la vigie. C'est dans son dos que se trouve la tourelle, dont l'habitacle est situé juste derrière le cockpit. À l'intérieur, une unique coursive relie les différentes parties du vaisseau, toutes plus exiguës les unes que les autres. Le Basic est un vaisseau de transport léger de catégorie C, le modèle le plus vendu, le plus volé et le plus utilisé de la Galaxie : son générateur, sa propulsion et son hyperpropulsion sont recyclés d'anciens appareils détruits. Il ne devrait coûter que 10 000 €, la barre psychologique du vaisseau le moins cher de la Galaxie."
 	s.classe = "Transport léger (100 t / 30 m)"
 	s.longueur_m = 30
 	s.tonnage = 100
@@ -162,7 +162,7 @@ func fiche_txt() -> String:
 	lines.append("Équipage standard : %d P + %d V + %d C + %d Me + %d Ma (%d)" % [eq.get("P", 0), eq.get("V", 0), eq.get("C", 0), eq.get("Me", 0), eq.get("Ma", 0), eq.get("total", 0)])
 	lines.append("Passagers : %d cabine(s) + %d dortoir(s) (max %d)" % [passagers_cabines, passagers_dortoirs, passagers_max])
 	lines.append("Soute : %d unités cargo" % soute)
-	lines.append("Prix : %s ¤ · Origine : %s" % [MAUtils.fmt_int(prix), origine])
+	lines.append("Prix : %s € · Origine : %s" % [MAUtils.fmt_int(prix), origine])
 	lines.append("Armement :")
 	for a in armement:
 		lines.append("  %s — %s (%s)" % [a["pos"], a["nom"], a["stats"]])
