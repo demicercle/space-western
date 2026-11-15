@@ -42,6 +42,10 @@ var context_menu: PopupMenu
 var confirm_dialog: AcceptDialog
 var pending_virer: Character = null
 var panel_style: StyleBoxFlat
+var ship_health_label: Label
+var ship_health_bar: ProgressBar
+var itineraire_label: Label
+var pause_menu: PopupMenu
 
 static func post_name_static(i: int) -> String:
 	if i < POSTS.size():
@@ -54,6 +58,7 @@ func _ready() -> void:
 	_build_left_panel()
 	_build_tabs()
 	_build_context_menu()
+	_build_pause_menu()
 	_start_game()
 
 func _setup_theme() -> void:
@@ -78,6 +83,19 @@ func _build_left_panel() -> void:
 	ship_name_label.add_theme_font_size_override("font_size", 16)
 	ship_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	left_vbox.add_child(ship_name_label)
+	var shb := VBoxContainer.new()
+	shb.add_theme_constant_override("separation", 2)
+	left_vbox.add_child(shb)
+	ship_health_label = Label.new()
+	ship_health_label.add_theme_font_size_override("font_size", 12)
+	shb.add_child(ship_health_label)
+	ship_health_bar = ProgressBar.new()
+	ship_health_bar.min_value = 0
+	ship_health_bar.max_value = 1
+	ship_health_bar.value = 1
+	ship_health_bar.show_percentage = false
+	ship_health_bar.custom_minimum_size = Vector2(0, 10)
+	shb.add_child(ship_health_bar)
 	credits_label = Label.new()
 	credits_label.add_theme_font_size_override("font_size", 14)
 	credits_label.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
@@ -127,6 +145,11 @@ func _build_tabs() -> void:
 	travel_info_label.add_theme_font_size_override("font_size", 13)
 	travel_info_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
 	side.add_child(travel_info_label)
+	itineraire_label = Label.new()
+	itineraire_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	itineraire_label.add_theme_font_size_override("font_size", 12)
+	itineraire_label.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
+	side.add_child(itineraire_label)
 	var btns := HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 8)
 	side.add_child(btns)
@@ -188,6 +211,85 @@ func _build_context_menu() -> void:
 	if "cancel_button_text" in confirm_dialog:
 		confirm_dialog.cancel_button_text = "Non"
 	confirm_dialog.confirmed.connect(_on_virer_confirmed)
+
+func _build_pause_menu() -> void:
+	pause_menu = PopupMenu.new()
+	add_child(pause_menu)
+	pause_menu.add_item("Quitter le jeu", 0)
+	pause_menu.add_item("Relancer le jeu depuis le début", 1)
+	pause_menu.add_check_item("Plein écran", 2)
+	pause_menu.add_separator()
+	pause_menu.add_item("Cheat : +1 000 €", 3)
+	pause_menu.add_item("Cheat : +1 000 Radix", 4)
+	pause_menu.id_pressed.connect(_on_pause_id)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+		if pause_menu.visible:
+			pause_menu.hide()
+		else:
+			pause_menu.set_item_checked(2, DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
+			pause_menu.popup_centered()
+		get_viewport().set_input_as_handled()
+
+func _on_pause_id(id: int) -> void:
+	match id:
+		0:
+			get_tree().quit()
+		1:
+			if get_tree().current_scene != null:
+				get_tree().reload_current_scene()
+			else:
+				get_tree().change_scene_to_file("res://main.tscn")
+		2:
+			if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			else:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		3:
+			credits += 1000
+			msg_label.text = "Cheat : +1 000 € (crédits : %s €)." % MAUtils.fmt_int(credits)
+			refresh_all()
+		4:
+			ship.radix_pc = mini(ship.autonomie_pc, ship.radix_pc + 1000)
+			msg_label.text = "Cheat : +1 000 Radix (réserve : %s / %s PC)." % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
+			refresh_all()
+
+func refresh_ship_health() -> void:
+	if ship == null:
+		return
+	var col := Color(0.55, 0.9, 0.55)
+	match ship.etat:
+		"L":
+			col = Color(0.9, 0.9, 0.4)
+		"G":
+			col = Color(1.0, 0.65, 0.3)
+		"D":
+			col = Color(1.0, 0.3, 0.3)
+	ship_health_label.text = "Coque : %d/%d PV · %s%s" % [ship.structure_pv, ship.coque_pv, Ship.etat_txt(ship.etat), " — DÉTRUIT" if ship.detruit else ""]
+	ship_health_label.add_theme_color_override("font_color", col)
+	ship_health_bar.max_value = maxf(1.0, float(ship.coque_pv))
+	ship_health_bar.value = clampf(float(ship.structure_pv), 0.0, ship_health_bar.max_value)
+
+func _itineraire_txt() -> String:
+	if destination.x < 0 or ship == null:
+		return "Aucun itinéraire tracé."
+	var jours := float(distance) / float(maxi(1, ship.vitesse_hyper_pc_j))
+	var j := int(jours)
+	var h := int(round((jours - j) * 24.0))
+	if h >= 24:
+		j += 1
+		h -= 24
+	var duree := "%d j" % j
+	if h > 0:
+		duree += " %d h" % h
+	if j == 0 and h == 0:
+		duree = "moins d'une heure"
+	var j_r := int(ceil(jours))
+	if absf(jours - roundf(jours)) < 0.001:
+		j_r = int(round(jours))
+	var rations := j_r * characters.size()
+	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (%d à bord)" % [MAUtils.fmt_int(distance), duree, rations, characters.size()]
 
 func _start_game() -> void:
 	ship = Ship.galactic_basic(MAUtils.pick(SHIP_NAMES))
@@ -416,6 +518,7 @@ func _update_info_label() -> void:
 	var pos_txt := "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	if destination.x < 0:
 		info_label.text = pos_txt + "\nCliquez sur une case de la carte galactique pour choisir une destination."
+		itineraire_label.text = _itineraire_txt()
 		return
 	var dest_sys := get_system(destination)
 	var named: Variant = GalaxyData.named_at(destination.x, destination.y)
@@ -428,6 +531,7 @@ func _update_info_label() -> void:
 		dest_name, GalaxyData.coord_label(destination.x, destination.y), GalaxyData.coord_text(destination.x, destination.y),
 		MAUtils.fmt_int(distance), ship.vitesse_hyper_pc_j, dest_sys.route, extra,
 	]
+	itineraire_label.text = _itineraire_txt()
 
 func _update_buttons() -> void:
 	var dk := docked()
@@ -615,6 +719,7 @@ func _on_recruit_hired(c: Character) -> void:
 
 func refresh_all() -> void:
 	ship_name_label.text = "Vaisseau : %s (%s) — %s" % [ship.nom, ship.modele, GalaxyData.coord_label(current_pos.x, current_pos.y)]
+	refresh_ship_health()
 	credits_label.text = "Crédits : %s €" % MAUtils.fmt_int(credits)
 	captain_label.text = "Capitaine : %s" % (captain.nom if captain != null else "—")
 	for c in characters:

@@ -31,7 +31,7 @@ Ouvrir le projet dans Godot 4 et lancer la scène `main.tscn` (scène principale
 
 - **Haut** : onglets Carte galactique / Carte de système / Équipage / Vaisseau / Commerce / Recruter.
 - **Crédits** : affichés en **€** (euro) partout dans l'interface.
-- **Gauche** : nom du vaisseau, **crédits**, capitaine, puis les cases « poste » (leur nombre dépend de l'équipage standard du vaisseau : Pilote, Vigie, Ingénieur, Canonnier, Fusilier, Cartographe / Historien), chacune vide ou assignée, plus la zone « hamac (sans poste) » qui accueille autant de personnages que le vaisseau le permet (passagers max).
+- **Gauche** : nom du vaisseau, **moniteur de santé du vaisseau** (coque PV/état + barre), **crédits**, capitaine, puis les cases « poste » (leur nombre dépend de l'équipage standard du vaisseau : Pilote, Vigie, Ingénieur, Canonnier, Fusilier, Cartographe / Historien), chacune vide ou assignée, plus la zone « hamac (sans poste) » qui accueille autant de personnages que le vaisseau le permet (passagers max).
 - **Jetons personnage** : portrait, nom, moniteur de santé (PV + état) — glissables d'un poste à l'autre (échange si le poste est occupé ; le poste survolé est surligné pendant le déplacement).
   - **clic gauche** sur un jeton → bascule sur l'onglet Équipage et sélectionne ce personnage ;
   - **clic droit** sur un portrait → menu déroulant : « Élire capitaine » (coché si déjà capitaine ; un seul capitaine, le premier personnage recruté l'est par défaut) et « Virer de l'équipage » (popup de confirmation oui/non).
@@ -41,7 +41,8 @@ Ouvrir le projet dans Godot 4 et lancer la scène `main.tscn` (scène principale
 - **Marchandage** (MdJ p271) : à la fin d'un voyage, si le vaisseau arrive sur une planète ou une station-relais, le **capitaine** fait le test d'opposition de Commerce ; chaque succès excédentaire du vendeur augmente le prix de vente de 5 % (acheteur : −5 %), plafonné à 50 %–150 % du prix de base × cours.
 - **Soute en unités cargo (1 UC = 1 t / 10 m³)** : chaque objet occupe une place, total ≤ capacité du vaisseau ; les **rations** sont débitées à chaque jour de voyage ; les **pièces détachées** sont consommées à chaque réparation de l'ingénieur (réparation impossible sans pièces).
 - « Faire le plein », « Recruter », l'onglet **Commerce** et « vendre » sont désactivés si le vaisseau n'est pas sur une station-relais ou une planète. Prix du Radix : tonnage × 0,75 €/1 000 PC sur une planète, × 1,5 € sur une station-relais.
-- **Carte galactique** : au-dessus du bouton « Calculer le voyage », rappel **Radix actuel / max** et **vitesse en PC/jour**, plus un bouton **« Faire le plein »** (prix : tonnage × 0,75 € par 1 000 PC).
+- **Carte galactique** : au-dessus du bouton « Calculer le voyage », rappel **Radix actuel / max** et **vitesse en PC/jour**, plus un bouton **« Faire le plein »** (prix : tonnage × 0,75 € par 1 000 PC). Lorsqu'un itinéraire est tracé (clic sur une case), affichage de la **durée estimée en jours/heures** (distance ÷ vitesse PC/j) et des **rations nécessaires** (jours de voyage × personnes à bord).
+- **Menu pause (F1)** : quitter le jeu, relancer depuis le début, plein écran on/off, cheats **+1 000 €** et **+1 000 Radix**.
 - **Onglet Recruter** : niveau (Normal, Élite, Héros, Boss, Big Boss) + profession, bouton « Trouver une recrue », puis « Recruter » en payant le prix (5 × salaire journalier en €/jour).
 - **Contrôle** : cliquer sur une case de la carte galactique pour tracer l'itinéraire, puis « Calculer le voyage » (calcul du saut + périls + consommations + salaires, journal de bord jour par jour). Le voyage exige un **Pilote** et une **Vigie** à leur poste.
 
