@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://c6od53gb55wn3"]
+[gd_scene load_steps=2 format=3 uid="uid://c6od53gb55wn3"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
 
 [node name="Main" type="Control" unique_id=1553018529]
 layout_mode = 3
@@ -7,3 +9,42 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="HSplit" type="HSplitContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+split_offset = 300
+
+[node name="LeftPanel" type="PanelContainer" parent="HSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(300, 0)
+
+[node name="LeftVBox" type="VBoxContainer" parent="HSplit/LeftPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RightVBox" type="VBoxContainer" parent="HSplit"]
+layout_mode = 2
+
+[node name="Tabs" type="TabContainer" parent="HSplit/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TabGalaxie" type="Control" parent="HSplit/RightVBox/Tabs"]
+layout_mode = 2
+
+[node name="TabSysteme" type="Control" parent="HSplit/RightVBox/Tabs"]
+layout_mode = 2
+
+[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/Tabs"]
+layout_mode = 2
+
+[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/Tabs"]
+layout_mode = 2

@@ -1,0 +1,93 @@
+class_name TravelTables
+
+const CATS := {
+	"inter": ["Rencontre heureuse", "Phénomène astrophysique heureux", "Beauté de l'espace", "Ennui mécanique", "Rencontre malheureuse", "Phénomène astrophysique malheureux", "Catastrophe !"],
+	"hyper": ["Phénomène astrophysique heureux", "Rencontre heureuse", "Beauté de l'espace", "Ennui mécanique", "Phénomène astrophysique malheureux", "Rencontre malheureuse", "Catastrophe !"],
+}
+
+const CLASSES := ["happy", "happy", "beauty", "mech", "bad", "bad", "disaster"]
+
+const INTER := [
+	{"sous": [["2-5", "epaveI"], ["6-8", "transport"], ["9-12", "yacht"]]},
+	{"sous": [["2-5", "asteroide"], ["6-8", "comete"], ["9-12", "vent"]]},
+	{"sous": [["2-5", "nebBoreale"], ["6-8", "dauphins"], ["9-12", "miroirs"]]},
+	{"sous": [["2", "pGravI"], ["3", "pRecycI"], ["4-5", "pSensI"], ["6-8", "pContI"], ["9-10", "pPropI"], ["11", "pNavI"], ["12", "pGenI"]]},
+	{"sous": [["2", "vFantome"], ["3", "cuirasse"], ["4-5", "fregate"], ["6-8", "corvette"], ["9-10", "parasites"], ["11", "ver"], ["12", "kraken"]]},
+	{"sous": [["2-5", "miniMet"], ["6-8", "champAst"], ["9-12", "distorsions"]]},
+	{"sous": [["2-5", "tempete"], ["6-8", "meteorites"], ["9-12", "patrouille"]]},
+]
+
+const HYPER := [
+	{"sous": [["2-5", "rayonnements"], ["6-8", "deferlante"], ["9-12", "courantT"]]},
+	{"sous": [["2-5", "ondines"], ["6-8", "epaveH"], ["9-12", "coquillages"]]},
+	{"sous": [["2-5", "horizons"], ["6-8", "arabesques"], ["9-12", "harmonies"]]},
+	{"sous": [["2", "pGravH"], ["3", "pRecycH"], ["4-5", "pSensH"], ["6-8", "pContH"], ["9-10", "pGenH"], ["11", "pNavH"], ["12", "pHyper"]]},
+	{"sous": [["2", "fluoRadio"], ["3", "nebuleuse"], ["4-5", "decharges"], ["6-8", "ombres"], ["9-10", "debris"], ["11", "amas"], ["12", "orageH"]]},
+	{"sous": [["2-5", "hypersqualls"], ["6-8", "hyperspectres"], ["9-12", "fantomes"]]},
+	{"sous": [["2-5", "fluoSpTi"], ["6-8", "tourbillons"], ["9-12", "trouNoir"]]},
+]
+
+const PERILS := {
+	"inter": {
+		"epaveI": {"n": "Épave", "s": 1, "ss": 1, "d": "100 t à l'aveuglette, containers OCG dans les débris.", "p": "Navigation (3) croiser · Pilotage (1) accoster · 4+ succès : 10 cargos (cat. C)."},
+		"transport": {"n": "Transport léger", "s": 3, "ss": "-", "d": "100 t pacifique : il négocie ou il fuit.", "p": "Navigation (2) pour provoquer la rencontre."},
+		"yacht": {"n": "Yacht de luxe", "s": 3, "ss": "-", "d": "1 000 t de plaisance désarmée.", "p": "Butin déterminé comme un acte de piraterie."},
+		"asteroide": {"n": "Astéroïde", "s": 3, "ss": 1, "d": "Un rocher-trompe : collé dessus, le vaisseau devient invisible.", "p": "Navigation (3) puis Pilotage (1) : invisible aux senseurs, vitesse 20 %."},
+		"comete": {"n": "Comète", "s": 3, "ss": 1, "d": "La queue pousse le vaisseau comme au bon vieux temps.", "p": "Navigation (3) puis Pilotage (1) : +5 US aujourd'hui par succès excédentaire."},
+		"vent": {"n": "Vent solaire", "s": 1, "ss": 3, "d": "Les senseurs saturent ; les écrans de bruit cachent proies et prédateurs.", "p": "Senseurs (TD) ; réglés (Senseurs (2)) : (TF) pour repérer."},
+		"nebBoreale": {"n": "Nébuleuse boréale", "s": 1, "ss": 1, "d": "Des gaz multicolores, inoffensifs : l'équipage colle aux hublots.", "p": "Sans protocole."},
+		"dauphins": {"n": "Dauphins de l'infini", "s": 4, "ss": 1, "d": "Une demi-douzaine de créatures d'énergie pure virevoltent.", "p": "Sans protocole."},
+		"miroirs": {"n": "Mer de miroirs", "s": 1, "ss": 1, "d": "Un champ de glace qui reflète le vaisseau.", "p": "Sans protocole."},
+		"pGravI": {"n": "Panne de la gravité artificielle", "s": "-", "ss": "-", "d": "Apesanteur : (D+1) à tous à bord.", "p": "Réparation : Ingénierie (2), fin de journée.", "panne": true, "repar": {"d": 2}, "eff": "grav"},
+		"pRecycI": {"n": "Panne du recycleur", "s": "-", "ss": "-", "d": "Plus d'eau potable.", "p": "Ingénierie (2) ; chaque jour non réparé : 10 % de l'eau délestée.", "panne": true, "repar": {"d": 2}, "eau": true},
+		"pSensI": {"n": "Panne des senseurs", "s": "-", "ss": "-", "d": "Sourds et aveugles : tests Senseurs ratés à 0 succès.", "p": "Ingénierie (2) (Vigie), fin de journée.", "panne": true, "repar": {"d": 2}, "eff": "sensMuets"},
+		"pContI": {"n": "Panne des contrôles", "s": "-", "ss": "-", "d": "Le gouvernail répond mal : Pilotage (TD) toute la journée.", "p": "Ingénierie (2) (Poste de pilotage), fin de journée.", "panne": true, "repar": {"d": 2}, "eff": "piloteTD"},
+		"pPropI": {"n": "Panne de la propulsion", "s": "-", "ss": "-", "d": "Vitesse ÷ 10 aujourd'hui ; tests de Pilotage ratés à 0 succès.", "p": "Ingénierie (2) (Machineries).", "panne": true, "repar": {"d": 2}, "eff": "prop"},
+		"pNavI": {"n": "Panne du navordinateur", "s": "-", "ss": "-", "d": "En interplanétaire, la distance parcourue ne rapproche plus de la destination.", "p": "Ingénierie (2) (Poste de pilotage) ; 0 succès : carte effacée.", "panne": true, "repar": {"d": 2}, "eff": "noProgress"},
+		"pGenI": {"n": "Panne du générateur", "s": "-", "ss": "-", "d": "À la dérive : vitesse ÷ 10 aujourd'hui.", "p": "Ingénierie (1) (TD), 1 h + 1 h de chauffe.", "panne": true, "repar": {"d": 1, "td": true}, "eff": "derive"},
+		"vFantome": {"n": "Vaisseau fantôme", "s": 5, "ss": "X", "d": "Un vaisseau mort qui dérive encore.", "p": "Navigation (3) éviter · Détermination (3) pour entrer.", "majeur": true},
+		"cuirasse": {"n": "Cuirassé", "s": 3, "ss": "-", "d": "10 000 t : forces de l'ordre ou mercenaires puissants.", "deg": "1M", "combat": true},
+		"fregate": {"n": "Frégate", "s": 3, "ss": "-", "d": "1 000 t, rapide et bien armée.", "deg": "1G", "combat": true},
+		"corvette": {"n": "Corvette", "s": 3, "ss": "-", "d": "100 t : pillards, pirates ou reconnaissance.", "deg": "2L", "combat": true},
+		"parasites": {"n": "Parasites spatiaux", "s": 5, "ss": 2, "d": "Des suceurs d'énergie se collent à la coque.", "deg": "500 PC d'autonomie", "combat": true},
+		"ver": {"n": "Ver de l'espace", "s": 5, "ss": 2, "d": "Il surgit d'un astéroïde à 0 K.", "deg": "2G", "combat": true},
+		"kraken": {"n": "Kraken", "s": 5, "ss": 2, "d": "Une créature grosse comme un cuirassé.", "deg": "2G", "combat": true},
+		"miniMet": {"n": "Mini-météorites", "s": 3, "ss": 1, "d": "Une nuée de gravillons à une vitesse folle.", "p": "Armes embarquées (1) (TD) · Pilotage (1) slalomer."},
+		"champAst": {"n": "Champ d'astéroïdes", "s": 1, "ss": 1, "d": "Des rochers à perte de vue : il faut tracer un couloir.", "p": "Senseurs (3) couloir · Navigation (3) route · Armes embarquées (1) · Pilotage (1)."},
+		"distorsions": {"n": "Distorsions gravitationnelles", "s": 3, "ss": 3, "d": "Le navordinateur est inutile : navigation à vue.", "p": "Senseurs (1) · Navigation (1) ; échec : la distance du jour s'ajoute au restant."},
+		"tempete": {"n": "Tempête cosmique", "s": 1, "ss": 5, "d": "Une tourmente de débris et d'éclairs, jusqu'à la sortie.", "p": "Ingénierie (3) · Navigation (3) · Armes embarquées (5) · Pilotage (5)."},
+		"meteorites": {"n": "Météorites", "s": 1, "ss": 3, "d": "Une pluie de pierres géantes : trois fois traverser.", "p": "Senseurs (5) · Navigation (5) · Armes embarquées (3) · Pilotage (3) ; protocole ×3."},
+		"patrouille": {"n": "Patrouille militaire", "s": 2, "ss": "-", "d": "1 cuirassé + 2 frégates de la nation du système.", "deg": "1M", "combat": true, "p": "Détectée : Navigation (3) pour l'éviter."},
+	},
+	"hyper": {
+		"rayonnements": {"n": "Rayonnements ioniques", "s": 2, "ss": 2, "d": "Le tunnel brille : un bain de jouvence pour le Radix.", "eff": "recharge", "p": "Non compris : +100 PC ; compris : Ingénierie (1), +500 PC par succès excédentaire."},
+		"deferlante": {"n": "Déferlante énergétique", "s": 2, "ss": 1, "d": "Une vague d'énergie pure déferle dans le tunnel.", "eff": "surfTF", "p": "Surfer sur la vague en (TF) aujourd'hui."},
+		"courantT": {"n": "Courant temporel", "s": 5, "ss": 5, "d": "Le temps lui-même recule : l'horloge du voyage reprend une journée.", "eff": "delay", "p": "J-1 sur l'horloge du voyage."},
+		"ondines": {"n": "Ondines de l'espace", "s": 3, "ss": 3, "d": "Des formes dorées virevoltent autour du vaisseau.", "p": "Comprises : (+1d) au Pilotage par ondine."},
+		"epaveH": {"n": "Épave", "s": 3, "ss": 1, "d": "Des débris solides, et des containers OCG au milieu.", "p": "Navigation (3) aligner · Pilotage (1) manœuvrer · 4+ succès : 1d cargos."},
+		"coquillages": {"n": "Coquillages galactiques", "s": 1, "ss": 3, "d": "Des coquilles d'énergie s'ouvrent et se referment dans le tunnel.", "p": "Ralentir : chaque vivant récupère sa Carrure en PV."},
+		"horizons": {"n": "Horizons lointains", "s": 1, "ss": 3, "d": "Le tunnel forme des paysages : planètes vues, ou à voir.", "p": "Connaissance (Nation stellaire) (5) pour reconnaître."},
+		"arabesques": {"n": "Arabesques énergétiques", "s": 1, "ss": 3, "d": "Des rubans de lumière tissent des motifs complexes.", "p": "Art (3) pour étudier."},
+		"harmonies": {"n": "Harmonies cosmiques", "s": 3, "ss": 1, "d": "Les courants énergétiques se mettent à chanter.", "p": "Sans danger."},
+		"pGravH": {"n": "Panne de la gravité artificielle", "s": "-", "ss": "-", "d": "L'apesanteur de l'hyperespace reprend ses droits : (D+1) à tous.", "p": "Ingénierie (2) (Machineries), fin de journée.", "panne": true, "repar": {"d": 2}, "eff": "grav"},
+		"pRecycH": {"n": "Panne du recycleur", "s": "-", "ss": "-", "d": "L'eau du robinet est marron.", "p": "Ingénierie (2) ; 10 % de l'eau délestée par jour non réparé.", "panne": true, "repar": {"d": 2}, "eau": true},
+		"pSensH": {"n": "Panne des senseurs", "s": "-", "ss": "-", "d": "Le vaisseau est sourd et aveugle.", "p": "Ingénierie (2) (Vigie), fin de journée.", "panne": true, "repar": {"d": 2}, "eff": "sensMuets"},
+		"pContH": {"n": "Panne des contrôles", "s": "-", "ss": "-", "d": "On dirige le vaisseau au gré des courants : Pilotage (TD).", "p": "Ingénierie (2) (Poste de pilotage), fin de journée.", "panne": true, "repar": {"d": 2}, "eff": "piloteTD"},
+		"pGenH": {"n": "Panne du générateur", "s": "-", "ss": "-", "d": "Tout s'arrête : en hyperespace, le vaisseau se désintègre sans l'ingénieur.", "p": "Ingénierie (1) (TD) ; Surfer sur la vague pour tenir l'hyperpropulsion.", "panne": true, "repar": {"d": 1, "td": true}, "eff": "derive"},
+		"pNavH": {"n": "Panne du navordinateur", "s": "-", "ss": "-", "d": "Plus personne ne calcule d'ajustements : Navigation (TD).", "p": "Ingénierie (2) (Poste de pilotage) ; destination inchangée.", "panne": true, "repar": {"d": 2}, "eff": "navTD"},
+		"pHyper": {"n": "Panne de l'hyperpropulsion", "s": "-", "ss": "-", "d": "Le tunnel disparaît : sans sécurité, le vaisseau se désintègre.", "p": "3 PP collectives pour l'arrêt d'urgence.", "majeur": true},
+		"fluoRadio": {"n": "Fluctuations radioactives", "s": 3, "ss": 1, "d": "Teinte verdâtre, voyants d'alerte : perte de vitesse.", "p": "Pilotage (3) tenir le cap · Ingénierie (1) ; de 0 (−1000 PC) à 7+ (normal)."},
+		"nebuleuse": {"n": "Nébuleuse", "s": 1, "ss": 1, "d": "Un brouillard retient les courants énergétiques.", "p": "Non compris : Surfer = échec ; compris : Surfer (TD).", "eff": "nebuleuse"},
+		"decharges": {"n": "Décharges énergétiques", "s": 2, "ss": 1, "d": "Des boules de feu hyperspatiales rattrapent le vaisseau.", "p": "Chaque échec de Surfer : 1S ignorant le Blindage ; détecté et compris : Surfer (TF).", "eff": "surfDanger"},
+		"ombres": {"n": "Ombres gravitationnelles", "s": 3, "ss": 1, "d": "Des ondes de l'espace normal percent le tunnel.", "p": "Senseurs (1) · Pilotage (3) ; barème standard."},
+		"debris": {"n": "Débris", "s": 3, "ss": 1, "d": "Les restes d'un autre vaisseau filent droit sur vous.", "p": "Armes embarquées (3) déblayer · Pilotage (1) manœuvrer."},
+		"amas": {"n": "Amas stellaires", "s": 3, "ss": 3, "d": "Un filet énergétique aux mailles trop rapprochées.", "p": "Senseurs (1) · Ingénierie (1) · Armes embarquées (1) (TD) ; Surfer impossible aujourd'hui.", "eff": "amas"},
+		"orageH": {"n": "Orage hyperspatial", "s": 3, "ss": 3, "d": "Des éclairs bleu vif visent les machineries.", "p": "Senseurs (3) · Ingénierie (1) · Surfer (3) ; dégâts ignorant le Blindage."},
+		"hypersqualls": {"n": "Hypersqualls", "s": 5, "ss": 3, "d": "Un monstre de plus de dix mètres déchire la paroi.", "deg": "1G", "combat": true, "p": "Inévitable même détecté ; Surfer possible."},
+		"hyperspectres": {"n": "Hyperspectres", "s": 5, "ss": 3, "d": "Des spectres d'énergie pure foncent sur le vaisseau.", "deg": "1G", "combat": true, "p": "Repérés : Armes embarquées (TD) donne (+1d) au Pilotage ; sinon ils traversent la coque."},
+		"fantomes": {"n": "Fantômes", "s": 5, "ss": "X", "d": "Un visage sur les senseurs, un souffle dans les coursives.", "p": "Inévitable : agression, vie quotidienne ou cauchemars.", "majeur": true},
+		"fluoSpTi": {"n": "Fluctuations spatio-temporelles", "s": 3, "ss": 5, "d": "La structure de l'hyperespace dévie : la destination est altérée.", "p": "Diagramme de dispersion : 1d × 1000 PC d'écart · Navigation (TD).", "majeur": true},
+		"tourbillons": {"n": "Tourbillons plasmiques", "s": 2, "ss": 3, "d": "Des colonnes de plasma traversent le tunnel de part en part.", "p": "Par tourbillon : Senseurs (5) · Armes embarquées (5) · Pilotage (3)."},
+		"trouNoir": {"n": "Trou noir", "s": 1, "ss": 1, "d": "Le tunnel se courbe, se tord, prend une lumière noire.", "p": "Pilotage (5) · Sciences stellaires (3) · Ingénierie (3) ; 0 succès : aspiré (3 PP)."},
+	},
+}
