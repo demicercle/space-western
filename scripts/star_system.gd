@@ -304,6 +304,53 @@ static func generate(quad_x: String, quad_y: int, opts := {}) -> StarSystem:
 func coord_txt() -> String:
 	return "%s-%d" % [quad_x, quad_y]
 
+func peut_amarrer() -> bool:
+	for c in corps:
+		if c["type"] == "planète" or c["type"] == "station":
+			return true
+	return false
+
+static func assurer_planete(s: StarSystem, nom: String) -> void:
+	for c in s.corps:
+		if c["type"] == "planète":
+			c["nom"] = nom
+			c["habitee"] = true
+			c["atmosphere"] = "respirable"
+			return
+	if s.corps.size() == 0:
+		return
+	var o: int = s.corps[0]["orbite"]
+	var c: Dictionary = _gen_corps(o, s)
+	c["type"] = "planète"
+	c["classe"] = "M"
+	c["nom"] = nom
+	c["habitee"] = true
+	c["atmosphere"] = "respirable"
+	c["environnement"] = MAUtils.pick(SystemTables.ENV_VIVABLE[c.get("temperature", "tempérée")])
+	c["eau"] = true
+	c["astroport"] = MAUtils.pick(["Standard OCG", "Première classe", "Rudimentaire"])
+	c["population"] = "5 milliards d'habitants"
+	c["commerce"] = "Carrefour galactique"
+	c["cours"] = _gen_cours(c["commerce"])
+	c["illegal"] = _gen_illegal()
+	c["securite"] = "%dd" % (1 + randi() % 6)
+	c["niveau_techno"] = "A"
+	c["gouvernement"] = s.gouvernement
+	s.corps[0] = c
+
+static func assurer_station(s: StarSystem, nom: String) -> void:
+	for c in s.corps:
+		if c["type"] == "station":
+			c["nom"] = nom
+			return
+	if s.corps.size() == 0:
+		s.corps.append({"orbite": 3, "distance_saut": s.limite - 3})
+	var c: Dictionary = _gen_corps(s.corps[0]["orbite"], s)
+	c["type"] = "station"
+	c["classe"] = "station orbitale"
+	c["nom"] = nom
+	s.corps[0] = c
+
 func infos_txt() -> String:
 	var lines: Array = []
 	lines.append("Système %s (%s)" % [nom, coord_txt()])

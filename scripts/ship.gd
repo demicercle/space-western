@@ -3,7 +3,9 @@ extends RefCounted
 
 var nom := ""
 var modele := ""
+var description := ""
 var classe := ""
+var equipage_postes := 4
 var longueur_m := 0
 var tonnage := 0
 var maneuvrabilite := "-"
@@ -39,6 +41,48 @@ static func etat_txt(e: String) -> String:
 		"D": return "Détruit"
 	return e
 
+static func galactic_basic(nom: String) -> Ship:
+	var s := Ship.new()
+	s.nom = nom
+	s.modele = "Galactic Basic"
+	s.description = "Le Basic est une grosse brique volante d'une trentaine de mètres de long. Sa coque, d'un gris triste, est bombée comme celle d'un bateau. Son pont supérieur est complètement plat et équipé d'une grande trappe d'accès à la soute. Son poste de pilotage ressemble à une coque d'œuf transparente et nervurée de métal. Exigu et fonctionnel, il offre un champ de vision presque circulaire au pilote et à la vigie. C'est dans son dos que se trouve la tourelle, dont l'habitacle est situé juste derrière le cockpit. À l'intérieur, une unique coursive relie les différentes parties du vaisseau, toutes plus exiguës les unes que les autres. Le Basic est un vaisseau de transport léger de catégorie C, le modèle le plus vendu, le plus volé et le plus utilisé de la Galaxie : son générateur, sa propulsion et son hyperpropulsion sont recyclés d'anciens appareils détruits. Il ne devrait coûter que 10 000 ¤, la barre psychologique du vaisseau le moins cher de la Galaxie."
+	s.classe = "Transport léger (100 t / 30 m)"
+	s.longueur_m = 30
+	s.tonnage = 100
+	s.maneuvrabilite = "-"
+	s.vitesse_tactique_K = 75
+	s.vitesse_croisiere_us_j = 12.0
+	s.vitesse_hyper_pc_j = 500
+	s.autonomie_pc = 10000
+	s.blindage = 0
+	s.coque_pv = 10
+	s.etat = "I"
+	s.structure_pv = s.coque_pv
+	s.senseurs = "350 K (3,5 US)"
+	s.armement = [
+		{"pos": "P (tourelle)", "nom": "Canon laser léger", "stats": "2L / SA / 250 K / 1C"},
+	]
+	s.equipage_standard = {"P": 1, "V": 1, "C": 1, "Me": 1, "Ma": 0, "total": 4}
+	s.equipage_postes = 4
+	s.passagers_cabines = 0
+	s.passagers_dortoirs = 5
+	s.passagers_max = 25
+	s.soute = 25
+	s.prix = 10000
+	s.origine = "OCG"
+	s.systemes_secondaires = []
+	s.radix_pc = s.autonomie_pc
+	s.rations = 30
+	s.cargaison = {
+		"Rations": 30,
+		"Medikit": 1,
+		"Munitions laser (x10)": 4,
+		"Scaphandre": 2,
+		"Pièces détachées (1 kg)": 5,
+		"Carte de système": 1,
+	}
+	return s
+
 static func galactic_scout(nom: String) -> Ship:
 	var s := Ship.new()
 	s.nom = nom
@@ -61,6 +105,7 @@ static func galactic_scout(nom: String) -> Ship:
 		{"pos": "V (tourelle)", "nom": "Canon laser léger", "stats": "2L / SA / 250 K / 1C"},
 	]
 	s.equipage_standard = {"P": 1, "V": 2, "C": 2, "Me": 3, "Ma": 0, "total": 8}
+	s.equipage_postes = 8
 	s.passagers_cabines = 0
 	s.passagers_dortoirs = 5
 	s.passagers_max = 25
@@ -110,7 +155,7 @@ func fiche_txt() -> String:
 	lines.append("Manœuvrabilité : %s · Vitesse tactique : %d K/t" % [maneuvrabilite, vitesse_tactique_K])
 	lines.append("Vitesse de croisière : %s US/h (%s US/j)" % [MAUtils.fmt_num(vitesse_croisiere_us_j / 24.0), MAUtils.fmt_num(vitesse_croisiere_us_j)])
 	lines.append("Vitesse hyperspatiale : %d PC/j" % vitesse_hyper_pc_j)
-	lines.append("Autonomie : %s PC · Réserve de Radix : %s PC" % [MAUtils.fmt_int(autonomie_pc), MAUtils.fmt_int(radix_pc)])
+	lines.append("Autonomie : %s PC · Réserve de Radix : %s / %s PC" % [MAUtils.fmt_int(autonomie_pc), MAUtils.fmt_int(radix_pc), MAUtils.fmt_int(autonomie_pc)])
 	lines.append("Blindage : %d · Coque : %d PV par état · État : %s (%d/%d PV)%s" % [blindage, coque_pv, etat_txt(etat), structure_pv, coque_pv, " — DÉTRUIT" if detruit else ""])
 	lines.append("Senseurs : %s" % senseurs)
 	var eq: Dictionary = equipage_standard

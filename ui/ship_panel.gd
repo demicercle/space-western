@@ -48,11 +48,13 @@ func set_ship(s: Ship) -> void:
 		hold_label.text = ""
 		return
 	var bb := "[b][color=gold]%s[/color][/b] — %s\n" % [s.nom, s.modele]
+	if s.description != "":
+		bb += "[i]%s[/i]\n\n" % s.description
 	bb += "Classe : %s\n" % s.classe
 	bb += "Manœuvrabilité : %s · Vitesse tactique : %d K/t\n" % [s.maneuvrabilite, s.vitesse_tactique_K]
 	bb += "Vitesse de croisière : %s US/h (%s US/j)\n" % [MAUtils.fmt_num(s.vitesse_croisiere_us_j / 24.0), MAUtils.fmt_num(s.vitesse_croisiere_us_j)]
 	bb += "Vitesse hyperspatiale : [b]%d PC/j[/b]\n" % s.vitesse_hyper_pc_j
-	bb += "Autonomie : %s PC · Réserve de Radix : [b]%s PC[/b]\n" % [MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_int(s.radix_pc)]
+	bb += "Autonomie : %s PC · Réserve de Radix : [b]%s / %s PC[/b]\n" % [MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc)]
 	bb += "Blindage : %d · Coque : %d PV/état\n" % [s.blindage, s.coque_pv]
 	bb += "État : [color=%s]%s[/color] (%d/%d PV)%s\n" % ["#ff5544" if s.detruit else "#7bed9f", Ship.etat_txt(s.etat), s.structure_pv, s.coque_pv, " — DÉTRUIT" if s.detruit else ""]
 	bb += "Senseurs : %s\n" % s.senseurs
@@ -65,7 +67,7 @@ func set_ship(s: Ship) -> void:
 		bb += "  %s — %s (%s)\n" % [a["pos"], a["nom"], a["stats"]]
 	bb += "\n[b]Systèmes secondaires[/b] : " + (", ".join(s.systemes_secondaires) if s.systemes_secondaires.size() > 0 else "aucun") + "\n"
 	sheet_label.text = bb
-	var hb := "[b]Réserve de Radix[/b] : %s PC (plein : %s PC à 1000 PC = tonnage × 1,5 R)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc)]
+	var hb := "[b]Réserve de Radix[/b] : %s / %s PC (prix du plein : tonnage × 0,75 ¤ par 1 000 PC, soit %s ¤/1 000 PC)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_num(s.tonnage * 0.75)]
 	hb += "[b]Rations[/b] : %d (1 par personne et par jour de voyage)\n\n" % s.rations
 	hb += "[b]Contenu de la soute[/b] (%d unités) :\n" % s.soute
 	var keys := s.cargaison.keys()

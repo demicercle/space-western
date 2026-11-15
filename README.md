@@ -29,7 +29,17 @@ Ouvrir le projet dans Godot 4 et lancer la scène `main.tscn` (scène principale
 
 ## Interface
 
-- **Haut** : onglets Carte galactique / Carte de système / Équipage / Vaisseau.
-- **Gauche** : nom du vaisseau + X cases « poste » (X = nombre total de personnes à bord : Capitaine, Pilote, Vigie, Ingénieur, Canonnier, Fusilier, Cartographe / Historien, Passager 1, 2…), chacune vide ou assignée ; zone « hamac » pour reposer un personnage.
-- **Jetons personnage** : portrait, nom, moniteur de santé — glissables d'un poste à l'autre (échange si le poste est occupé).
-- **Contrôle** : cliquer sur une case de la carte galactique pour tracer l'itinéraire, puis « Calculer le voyage » (calcul du saut + périls + consommations, journal de bord jour par jour).
+- **Haut** : onglets Carte galactique / Carte de système / Équipage / Vaisseau / Recruter.
+- **Gauche** : nom du vaisseau, **crédits**, capitaine, puis les cases « poste » (leur nombre dépend de l'équipage standard du vaisseau : Pilote, Vigie, Ingénieur, Canonnier, Fusilier, Cartographe / Historien), chacune vide ou assignée, plus la zone « hamac (sans poste) » qui accueille autant de personnages que le vaisseau le permet (passagers max).
+- **Jetons personnage** : portrait, nom, moniteur de santé (PV + état) — glissables d'un poste à l'autre (échange si le poste est occupé ; le poste survolé est surligné pendant le déplacement).
+  - **clic gauche** sur un jeton → bascule sur l'onglet Équipage et sélectionne ce personnage ;
+  - **clic droit** sur un portrait → menu déroulant : « Élire capitaine » (coché si déjà capitaine ; un seul capitaine, le premier personnage recruté l'est par défaut) et « Virer de l'équipage » (popup de confirmation oui/non).
+- **Onglet Équipage** : une seule fiche de personnage à la fois, sélectionnable via les boutons de l'en-tête (ou en cliquant un jeton à gauche).
+- **Onglet Vaisseau** : description du modèle (Manuel p.255), caractéristiques, armement, systèmes secondaires, soute, et **réserve de Radix actuel / maximum**.
+- **Carte galactique** : au-dessus du bouton « Calculer le voyage », rappel **Radix actuel / max** et **vitesse en PC/jour**, plus un bouton **« Faire le plein »** (prix : tonnage × 0,75 ¤ par 1 000 PC).
+- **Onglet Recruter** : niveau (Normal, Élite, Héros, Boss, Big Boss) + profession, bouton « Trouver une recrue », puis « Recruter » en payant le prix (5 × salaire journalier en ¤/jour).
+- **Contrôle** : cliquer sur une case de la carte galactique pour tracer l'itinéraire, puis « Calculer le voyage » (calcul du saut + périls + consommations + salaires, journal de bord jour par jour). Le voyage exige un **Pilote** et une **Vigie** à leur poste.
+
+## Règles de démarrage
+
+- Le vaisseau démarre à **Exxalia (Epsilon, 21)** : un **Galactic Basic** (500 PC/j, autonomie 10 000 PC), **8 000 ¤**, et **zéro personnage** — il faut recruter (onglet Recruter, possible uniquement sur une planète ou une station-relais, idem pour « Faire le plein") avant de pouvoir voyager.

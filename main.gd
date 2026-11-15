@@ -1,7 +1,8 @@
 class_name Main
 extends Control
 
-const POSTS := ["Capitaine", "Pilote", "Vigie", "Ingénieur", "Canonnier", "Fusilier", "Cartographe / Historien"]
+const POSTS := ["Pilote", "Vigie", "Ingénieur", "Canonnier", "Fusilier", "Cartographe / Historien"]
+const TAB_RECRUTER := 4
 
 const SHIP_NAMES := ["La Guigne", "Black Pearl", "Vengeance", "L'Étoile Filante", "La Sirène", "Jolly Roger", "Faucon Noir", "La Glorieuse", "Mauvaise Fortune", "L'Épervier", "La Comète Noire", "Santa Maria"]
 
@@ -11,6 +12,8 @@ const SHIP_NAMES := ["La Guigne", "Black Pearl", "Vengeance", "L'Étoile Filante
 var ship: Ship
 var characters: Array = []
 var char_tokens := {}
+var captain: Character = null
+var credits := 0
 var current_pos := GalaxyData.EXXALIA
 var destination := Vector2i(-1, -1)
 var distance := 0
@@ -21,11 +24,20 @@ var galaxy_map: GalaxyMap
 var system_map: SystemMap
 var crew_panel: CrewPanel
 var ship_panel: ShipPanel
+var recruit_panel: RecruitPanel
 var posts_container: VBoxContainer
 var ship_name_label: Label
+var credits_label: Label
+var captain_label: Label
 var info_label: Label
+var travel_info_label: Label
+var msg_label: Label
+var plein_button: Button
 var calc_button: Button
 var journal: RichTextLabel
+var context_menu: PopupMenu
+var confirm_dialog: AcceptDialog
+var pending_virer: Character = null
 var panel_style: StyleBoxFlat
 
 static func post_name_static(i: int) -> String:
@@ -38,6 +50,7 @@ func _ready() -> void:
 	_setup_theme()
 	_build_left_panel()
 	_build_tabs()
+	_build_context_menu()
 	_start_game()
 
 func _setup_theme() -> void:
@@ -52,15 +65,26 @@ func _setup_theme() -> void:
 	%LeftPanel.add_theme_stylebox_override("panel", panel_style)
 
 func apply_panel_style(p: PanelContainer) -> void:
-	p.add_theme_stylebox_override("panel", panel_style)
+	if p is PostSlot:
+		p.set_normal_style(panel_style)
+	else:
+		p.add_theme_stylebox_override("panel", panel_style)
 
 func _build_left_panel() -> void:
 	ship_name_label = Label.new()
 	ship_name_label.add_theme_font_size_override("font_size", 16)
 	ship_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	left_vbox.add_child(ship_name_label)
+	credits_label = Label.new()
+	credits_label.add_theme_font_size_override("font_size", 14)
+	credits_label.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
+	left_vbox.add_child(credits_label)
+	captain_label = Label.new()
+	captain_label.add_theme_font_size_override("font_size", 12)
+	captain_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	left_vbox.add_child(captain_label)
 	var pl := Label.new()
-	pl.text = "Postes à bord (glisser-déposer un personnage) :"
+	pl.text = "Postes à bord (glisser-déposer un personnage ; clic = fiche ; clic droit = menu) :"
 	pl.add_theme_font_size_override("font_size", 12)
 	pl.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -74,6 +98,7 @@ func _build_tabs() -> void:
 	tabs.set_tab_title(1, "Carte de système")
 	tabs.set_tab_title(2, "Équipage")
 	tabs.set_tab_title(3, "Vaisseau")
+	tabs.set_tab_title(4, "Recruter")
 
 	var tab_g: Control = tabs.get_child(0)
 	var hb := HBoxContainer.new()
@@ -93,11 +118,28 @@ func _build_tabs() -> void:
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info_label.add_theme_font_size_override("font_size", 12)
 	side.add_child(info_label)
+	travel_info_label = Label.new()
+	travel_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	travel_info_label.add_theme_font_size_override("font_size", 13)
+	travel_info_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+	side.add_child(travel_info_label)
+	var btns := HBoxContainer.new()
+	btns.add_theme_constant_override("separation", 8)
+	side.add_child(btns)
+	plein_button = Button.new()
+	plein_button.text = "Faire le plein"
+	plein_button.pressed.connect(_on_faire_le_plein)
+	btns.add_child(plein_button)
 	calc_button = Button.new()
 	calc_button.text = "Calculer le voyage"
 	calc_button.disabled = true
 	calc_button.pressed.connect(_on_calc_voyage)
-	side.add_child(calc_button)
+	btns.add_child(calc_button)
+	msg_label = Label.new()
+	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	msg_label.add_theme_font_size_override("font_size", 11)
+	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
+	side.add_child(msg_label)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = SIZE_EXPAND_FILL
 	side.add_child(scroll)
@@ -120,15 +162,29 @@ func _build_tabs() -> void:
 	ship_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(3).add_child(ship_panel)
 
+	recruit_panel = RecruitPanel.new()
+	recruit_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tabs.get_child(4).add_child(recruit_panel)
+	recruit_panel.recruit_found.connect(_on_recruit_found)
+	recruit_panel.recruit_hired.connect(_on_recruit_hired)
+
+func _build_context_menu() -> void:
+	context_menu = PopupMenu.new()
+	add_child(context_menu)
+	context_menu.id_pressed.connect(_on_context_id)
+	confirm_dialog = AcceptDialog.new()
+	add_child(confirm_dialog)
+	confirm_dialog.get_ok_button().text = "Oui"
+	if "cancel_button_text" in confirm_dialog:
+		confirm_dialog.cancel_button_text = "Non"
+	confirm_dialog.confirmed.connect(_on_virer_confirmed)
+
 func _start_game() -> void:
-	ship = Ship.galactic_scout(MAUtils.pick(SHIP_NAMES))
+	ship = Ship.galactic_basic(MAUtils.pick(SHIP_NAMES))
+	credits = 8000
+	characters = []
+	captain = null
 	current_system = get_system(current_pos)
-	for i in range(4):
-		var c := Character.generate("Héros", "Premier rôle")
-		c.post_index = i
-		characters.append(c)
-		char_tokens[c] = CharacterToken.new()
-		char_tokens[c].setup(c)
 	refresh_all()
 
 func get_system(cell: Vector2i) -> StarSystem:
@@ -136,10 +192,14 @@ func get_system(cell: Vector2i) -> StarSystem:
 	if systems_cache.has(key):
 		return systems_cache[key]
 	var s: StarSystem
+	var named: Variant = GalaxyData.named_at(cell.x, cell.y)
 	if cell == GalaxyData.EXXALIA:
 		s = StarSystem.generate("Ε", 21, {"nom": "Exxalia", "nation": "l'OCG (Omni-cartel Galactique)", "route": "Route galactique", "gouvernement": "Corporatiste"})
+		StarSystem.assurer_planete(s, "Exxalia")
+	elif named != null and named["type"] == "relais":
+		s = StarSystem.generate(GalaxyData.letter_symbol(cell.x), cell.y, {"nom": named["nom"]})
+		StarSystem.assurer_station(s, named["nom"])
 	else:
-		var named: Variant = GalaxyData.named_at(cell.x, cell.y)
 		var opts := {}
 		if named != null:
 			opts["nom"] = named["nom"]
@@ -147,32 +207,49 @@ func get_system(cell: Vector2i) -> StarSystem:
 	systems_cache[key] = s
 	return s
 
+func docked() -> bool:
+	return current_system != null and current_system.peut_amarrer()
+
+func nb_posts() -> int:
+	return mini(POSTS.size(), ship.equipage_postes)
+
+func make_token(c: Character) -> CharacterToken:
+	var t := CharacterToken.new()
+	t.setup(c)
+	t.left_clicked.connect(_on_token_left_clicked)
+	t.right_clicked.connect(_on_token_right_clicked)
+	char_tokens[c] = t
+	return t
+
 func rebuild_posts() -> void:
 	for ch in posts_container.get_children():
 		posts_container.remove_child(ch)
 		ch.queue_free()
-	for i in range(characters.size()):
+	for i in range(nb_posts()):
 		var slot := PostSlot.new()
 		slot.post_name = post_name_static(i)
 		slot.post_index = i
 		slot.token_dropped.connect(_on_token_dropped)
 		posts_container.add_child(slot)
 		apply_panel_style(slot)
+		var lst: Array = []
 		for c in characters:
 			if c.post_index == i:
-				slot.token = char_tokens[c]
-		slot.refresh()
+				lst.append(char_tokens[c])
+		slot.set_tokens(lst)
 	var hamac := PostSlot.new()
 	hamac.is_hamac = true
 	hamac.post_name = "Hamac (sans poste)"
 	hamac.post_index = -1
+	hamac.hamac_max = ship.passagers_max
 	hamac.token_dropped.connect(_on_token_dropped)
 	posts_container.add_child(hamac)
 	apply_panel_style(hamac)
+	var hlist: Array = []
 	for c in characters:
 		if c.post_index == -1:
-			hamac.token = char_tokens[c]
-	hamac.refresh()
+			hlist.append(char_tokens[c])
+	hamac.set_tokens(hlist)
 
 func _on_token_dropped(slot: PostSlot, token: CharacterToken) -> void:
 	var ch: Character = token.character
@@ -180,33 +257,102 @@ func _on_token_dropped(slot: PostSlot, token: CharacterToken) -> void:
 	if ch.post_index == new_idx:
 		return
 	var old_idx := ch.post_index
-	for c in characters:
-		if c != ch and c.post_index == new_idx:
-			c.post_index = old_idx
+	if new_idx >= 0:
+		for c in characters:
+			if c != ch and c.post_index == new_idx:
+				c.post_index = old_idx
 	ch.post_index = new_idx
 	rebuild_posts()
-	crew_panel.set_characters(characters)
+	crew_panel.set_characters(characters, captain)
+
+func _on_token_left_clicked(token: CharacterToken) -> void:
+	tabs.current_tab = 2
+	crew_panel.select_character(token.character)
+
+func _on_token_right_clicked(token: CharacterToken, global_pos: Vector2) -> void:
+	pending_virer = token.character
+	context_menu.clear()
+	context_menu.add_check_item("Élire capitaine", 0)
+	context_menu.set_item_checked(0, captain == token.character)
+	context_menu.add_item("Virer de l'équipage", 1)
+	context_menu.popup(Rect2i(Vector2i(global_pos), Vector2i(220, 0)))
+
+func _on_context_id(id: int) -> void:
+	if pending_virer == null:
+		return
+	if id == 0:
+		captain = pending_virer
+		refresh_all()
+	elif id == 1:
+		confirm_dialog.dialog_text = "Virer %s de l'équipage ?" % pending_virer.nom
+		confirm_dialog.popup_centered()
+
+func _on_virer_confirmed() -> void:
+	if pending_virer == null:
+		return
+	var ch: Character = pending_virer
+	pending_virer = null
+	characters.erase(ch)
+	if char_tokens.has(ch):
+		char_tokens[ch].queue_free()
+		char_tokens.erase(ch)
+	if captain == ch:
+		captain = characters[0] if characters.size() > 0 else null
+	if crew_panel.selected == ch:
+		crew_panel.selected = characters[0] if characters.size() > 0 else null
+	refresh_all()
 
 func _on_cell_clicked(col: int, row: int) -> void:
 	destination = Vector2i(col, row)
 	distance = GalaxyData.distance_pc(current_pos, destination)
 	galaxy_map.destination = destination
 	galaxy_map.queue_redraw()
-	calc_button.disabled = false
+	msg_label.text = ""
 	_update_info_label()
+	_update_buttons()
+
+func can_travel() -> bool:
+	var has_pilot := false
+	var has_vigie := false
+	for c in characters:
+		if c.post_index < 0:
+			continue
+		match post_name_static(c.post_index):
+			"Pilote":
+				has_pilot = true
+			"Vigie":
+				has_vigie = true
+	return has_pilot and has_vigie
+
+func salaire_jour() -> int:
+	var s := 0
+	for c in characters:
+		s += c.prix_journalier
+	return s
 
 func _update_info_label() -> void:
+	var pos_txt := "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	if destination.x < 0:
-		info_label.text = "Position : %s (%s)\nCliquez sur une case de la carte galactique pour choisir une destination." % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
+		info_label.text = pos_txt + "\nCliquez sur une case de la carte galactique pour choisir une destination."
 		return
 	var dest_sys := get_system(destination)
 	var named: Variant = GalaxyData.named_at(destination.x, destination.y)
 	var dest_name: String = named["nom"] if named != null else "case inconnue"
-	info_label.text = "Position : %s (%s)\nDestination : %s — %s (%s)\nDistance : %s PC (1 case = 1 000 PC) · Vitesse : %d PC/j · Route : %s" % [
-		GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y),
+	var extra := ""
+	if not can_travel():
+		extra = "\n/!\\ Calculer un voyage exige un Pilote ET une Vigie à leur poste."
+	info_label.text = "%s\nDestination : %s — %s (%s)\nDistance : %s PC (1 case = 1 000 PC) · Vitesse : %d PC/j · Route : %s%s" % [
+		pos_txt,
 		dest_name, GalaxyData.coord_label(destination.x, destination.y), GalaxyData.coord_text(destination.x, destination.y),
-		MAUtils.fmt_int(distance), ship.vitesse_hyper_pc_j, dest_sys.route,
+		MAUtils.fmt_int(distance), ship.vitesse_hyper_pc_j, dest_sys.route, extra,
 	]
+
+func _update_buttons() -> void:
+	var dk := docked()
+	tabs.set_tab_disabled(TAB_RECRUTER, not dk)
+	plein_button.disabled = not dk or ship.radix_pc >= ship.autonomie_pc
+	calc_button.disabled = destination.x < 0 or not can_travel()
+	recruit_panel.set_enabled_state(dk, credits, characters.size(), ship.passagers_max)
 
 func _post_skills() -> Dictionary:
 	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0}
@@ -230,8 +376,34 @@ func _post_skills() -> Dictionary:
 					sk["carto"] = maxi(c.get_comp("Navigation"), c.get_comp("Histoire"))
 	return sk
 
+func _on_faire_le_plein() -> void:
+	if not docked():
+		msg_label.text = "Faire le plein impossible : le vaisseau n'est pas sur une planète ou une station-relais."
+		return
+	var missing := ship.autonomie_pc - ship.radix_pc
+	if missing <= 0:
+		msg_label.text = "La réserve de Radix est déjà pleine."
+		return
+	var unit_price: float = ship.tonnage * 0.75
+	var blocks := int(ceil(missing / 1000.0))
+	var cost := int(round(blocks * unit_price))
+	if credits >= cost:
+		ship.radix_pc = ship.autonomie_pc
+		credits -= cost
+		msg_label.text = "Plein effectué : +%s PC pour %s ¤." % [MAUtils.fmt_int(missing), MAUtils.fmt_int(cost)]
+	else:
+		var afford := int(credits / unit_price)
+		if afford <= 0:
+			msg_label.text = "Crédits insuffisants pour acheter du Radix (%s ¤/1 000 PC)." % MAUtils.fmt_num(unit_price)
+			return
+		var add := afford * 1000
+		ship.radix_pc += add
+		credits -= int(round(afford * unit_price))
+		msg_label.text = "Plein partiel : +%s PC pour %s ¤." % [MAUtils.fmt_int(add), MAUtils.fmt_int(afford * unit_price)]
+	refresh_all()
+
 func _on_calc_voyage() -> void:
-	if destination.x < 0:
+	if destination.x < 0 or not can_travel():
 		return
 	calc_button.disabled = true
 	var sk := _post_skills()
@@ -258,19 +430,23 @@ func _on_calc_voyage() -> void:
 		ship.radix_pc = int(round(res["reserve"]))
 	ship.rations = maxi(0, ship.rations - res["resume"]["rations"])
 	ship.cargaison["Rations"] = ship.rations
+	var sal: int = salaire_jour() * int(res["jours_count"])
+	credits = maxi(0, credits - sal)
 	for deg in res["resume"]["degats"]:
 		if str(deg).contains("PC"):
 			continue
 		ship.subir_degats(str(deg))
-	_render_journal(res, dest_sys)
+	_render_journal(res, dest_sys, sal)
 	if res["arrivee"]:
 		current_pos = destination
 		current_system = dest_sys
 		if not galaxy_map.explored.has(destination):
 			galaxy_map.explored.append(destination)
+		msg_label.text = "Arrivé à %s (%s)." % [dest_sys.nom, GalaxyData.coord_label(destination.x, destination.y)]
 	elif res["a_sec"] and res["case_finale"] != null:
 		current_pos = res["case_finale"]
 		current_system = get_system(current_pos)
+		msg_label.text = "Panne sèche — position relevée : %s." % GalaxyData.coord_label(current_pos.x, current_pos.y)
 	for c in res["resume"]["cases_relees"]:
 		if not galaxy_map.explored.has(c):
 			galaxy_map.explored.append(c)
@@ -278,7 +454,7 @@ func _on_calc_voyage() -> void:
 	galaxy_map.destination = destination
 	refresh_all()
 
-func _render_journal(res: Dictionary, dest_sys: StarSystem) -> void:
+func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int) -> void:
 	var dep: Vector2i = res["cfg"]["dep"]
 	var arr: Vector2i = res["cfg"]["arr"]
 	var bb := "[b][color=gold]Voyage : %s → %s[/color][/b]\n" % [GalaxyData.coord_label(dep.x, dep.y), GalaxyData.coord_label(arr.x, arr.y)]
@@ -307,20 +483,52 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem) -> void:
 		bb += "Dégâts subis : " + " ; ".join(T["degats"]) + "\n"
 	if T["majeurs"].size() > 0:
 		bb += "Événements majeurs : " + " ; ".join(T["majeurs"]) + "\n"
-	bb += "Radix consommé : %s PC (réserve restante : %s PC) · Rations consommées : %d (reste %d)\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_int(ship.radix_pc), T["rations"], ship.rations]
+	bb += "Radix consommé : %s PC (réserve restante : %s / %s PC) · Rations consommées : %d (reste %d)\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), T["rations"], ship.rations]
 	if T["rations"] > 0 and ship.rations == 0:
 		bb += "[color=ff5544]Famine à bord : les rations sont épuisées ![/color]\n"
-	if T["eau_pct"] > 0:
-		bb += "Eau délestée (recycleur en panne) : %d %%\n" % int(T["eau_pct"])
+	bb += "Salaires de l'équipage : %d ¤/jour × %d jour(s) = %s ¤ — crédits restants : %s ¤\n" % [salaire_jour(), res["jours_count"], MAUtils.fmt_int(sal_total), MAUtils.fmt_int(credits)]
 	bb += "Bonus de pilotage gagnés : +%s PC\n" % MAUtils.fmt_num(T["bonus"])
 	journal.text = bb
 
+func _on_recruit_found(c: Character) -> void:
+	recruit_panel.show_recrue(c)
+	_update_buttons()
+
+func _on_recruit_hired(c: Character) -> void:
+	if not docked():
+		recruit_panel.set_message("Recrutement impossible hors planète/station-relais.")
+		return
+	if characters.size() >= ship.passagers_max:
+		recruit_panel.set_message("Le vaisseau est plein (%d/%d)." % [characters.size(), ship.passagers_max])
+		return
+	if credits < c.prix_recrutement:
+		recruit_panel.set_message("Crédits insuffisants (%s ¤ requis)." % MAUtils.fmt_int(c.prix_recrutement))
+		return
+	credits -= c.prix_recrutement
+	c.post_index = -1
+	characters.append(c)
+	make_token(c)
+	if captain == null:
+		captain = c
+	recruit_panel.clear_recrue()
+	recruit_panel.set_message("%s rejoint l'équipage pour %s ¤ (salaire %d ¤/jour). Premier personnage = capitaine." % [c.nom, MAUtils.fmt_int(c.prix_recrutement), c.prix_journalier])
+	refresh_all()
+
 func refresh_all() -> void:
 	ship_name_label.text = "Vaisseau : %s (%s) — %s" % [ship.nom, ship.modele, GalaxyData.coord_label(current_pos.x, current_pos.y)]
+	credits_label.text = "Crédits : %s ¤" % MAUtils.fmt_int(credits)
+	captain_label.text = "Capitaine : %s" % (captain.nom if captain != null else "—")
+	for c in characters:
+		if char_tokens.has(c):
+			char_tokens[c].is_captain = c == captain
+			char_tokens[c].refresh_name()
+			char_tokens[c].refresh_health()
 	rebuild_posts()
-	crew_panel.set_characters(characters)
+	crew_panel.set_characters(characters, captain)
 	ship_panel.set_ship(ship)
 	system_map.set_system(current_system)
 	galaxy_map.current_pos = current_pos
 	galaxy_map.queue_redraw()
+	travel_info_label.text = "Radix : %s / %s PC · Vitesse : %d PC/j" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), ship.vitesse_hyper_pc_j]
 	_update_info_label()
+	_update_buttons()

@@ -22,12 +22,19 @@ var gloire := 0
 var defauts: Array = []
 var qualites: Array = []
 var post_index := -1
+var prix_journalier := 0
+var prix_recrutement := 0
 
-static func generate(puissance := "Héros", role := "Premier rôle") -> Character:
+const PRIX_JOURNALIER := {"Normal": 10, "Élite": 25, "Héros": 50, "Boss": 250, "Big Boss": 1000}
+
+static func generate(puissance := "Héros", role := "Premier rôle", profession := "") -> Character:
 	var c := Character.new()
 	c.puissance = puissance
 	c.role = role
-	var profession: String = MAUtils.pick(NPCTables.PROFESSIONS.keys())
+	if profession == "" or not NPCTables.PROFESSIONS.has(profession):
+		profession = MAUtils.pick(NPCTables.PROFESSIONS.keys())
+	c.prix_journalier = PRIX_JOURNALIER.get(puissance, 10)
+	c.prix_recrutement = 5 * c.prix_journalier
 	var p: Dictionary = NPCTables.PROFESSIONS[profession]
 	c.profession = profession
 	c.pirate = profession == "Pirate de l'espace"

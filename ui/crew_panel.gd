@@ -1,18 +1,33 @@
 class_name CrewPanel
-extends ScrollContainer
+extends VBoxContainer
 
-var cards: HBoxContainer
+var selector: HBoxContainer
+var card_scroll: ScrollContainer
+var card_holder: VBoxContainer
+var characters: Array = []
+var selected: Character = null
+var captain: Character = null
 
 func _ready() -> void:
-	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	cards = HBoxContainer.new()
-	cards.add_theme_constant_override("separation", 10)
-	cards.size_flags_horizontal = SIZE_EXPAND_FILL
-	add_child(cards)
+	add_theme_constant_override("separation", 8)
+	var head := Label.new()
+	head.text = "Équipage — sélectionnez un membre pour afficher sa fiche :"
+	head.add_theme_font_size_override("font_size", 13)
+	head.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	add_child(head)
+	selector = HBoxContainer.new()
+	selector.add_theme_constant_override("separation", 6)
+	add_child(selector)
+	card_scroll = ScrollContainer.new()
+	card_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	add_child(card_scroll)
+	card_holder = VBoxContainer.new()
+	card_holder.size_flags_horizontal = SIZE_EXPAND_FILL
+	card_scroll.add_child(card_holder)
 
-func _make_card(c: Character) -> PanelContainer:
+static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(300, 0)
+	card.custom_minimum_size = Vector2(340, 0)
 	var vb := VBoxContainer.new()
 	card.add_child(vb)
 	var hb := HBoxContainer.new()
@@ -26,9 +41,9 @@ func _make_card(c: Character) -> PanelContainer:
 	vb2.size_flags_horizontal = SIZE_EXPAND_FILL
 	hb.add_child(vb2)
 	var nl := Label.new()
-	nl.text = c.nom
+	nl.text = ("♛ " if is_captain else "") + c.nom
 	nl.add_theme_font_size_override("font_size", 14)
-	nl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
+	nl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3) if is_captain else Color(1.0, 0.9, 0.5))
 	vb2.add_child(nl)
 	var pl := Label.new()
 	pl.text = "%s · %s · %s" % [c.profession, c.puissance, c.role]
@@ -36,10 +51,15 @@ func _make_card(c: Character) -> PanelContainer:
 	pl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	vb2.add_child(pl)
 	var post := Label.new()
-	post.text = "Poste : %s" % ("au hamac (sans poste)" if c.post_index < 0 else Main.post_name_static(c.post_index))
+	post.text = "Poste : %s%s" % ["au hamac (sans poste)" if c.post_index < 0 else Main.post_name_static(c.post_index), " · CAPITAINE" if is_captain else ""]
 	post.add_theme_font_size_override("font_size", 11)
 	post.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
 	vb2.add_child(post)
+	var pr := Label.new()
+	pr.text = "Salaire : %d ¤/jour · Recrutement : %d ¤" % [c.prix_journalier, c.prix_recrutement]
+	pr.add_theme_font_size_override("font_size", 11)
+	pr.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
+	vb2.add_child(pr)
 	var sep := HSeparator.new()
 	vb.add_child(sep)
 	var cl := Label.new()
@@ -90,9 +110,51 @@ func _make_card(c: Character) -> PanelContainer:
 		vb.add_child(ml)
 	return card
 
-func set_characters(characters: Array) -> void:
-	for ch in cards.get_children():
-		cards.remove_child(ch)
+func set_characters(chars: Array, cap: Character = null) -> void:
+	characters = chars
+	captain = cap
+	for ch in selector.get_children():
+		selector.remove_child(ch)
 		ch.queue_free()
 	for c in characters:
-		cards.add_child(_make_card(c))
+		var b := Button.new()
+		b.text = ("♛ " if c == captain else "") + c.nom
+		b.toggle_mode = true
+		b.button_pressed = c == selected
+		b.pressed.connect(_on_select.bind(c))
+		selector.add_child(b)
+	if selected != null and not characters.has(selected):
+		selected = null
+	if selected == null and characters.size() > 0:
+		selected = characters[0]
+	_refresh_card()
+
+func select_character(c: Character) -> void:
+	if not characters.has(c):
+		return
+	selected = c
+	for ch in selector.get_children():
+		if ch is Button:
+			var b := ch as Button
+			b.button_pressed = b.text.ends_with(c.nom)
+	_refresh_card()
+
+func _on_select(c: Character) -> void:
+	selected = c
+	for ch in selector.get_children():
+		if ch is Button:
+			(ch as Button).button_pressed = (ch as Button).text.ends_with(c.nom)
+	_refresh_card()
+
+func _refresh_card() -> void:
+	for ch in card_holder.get_children():
+		card_holder.remove_child(ch)
+		ch.queue_free()
+	if selected == null:
+		var l := Label.new()
+		l.text = "Aucun membre d'équipage. Recrutez depuis l'onglet « Recruter »."
+		l.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
+		card_holder.add_child(l)
+		return
+	card_holder.add_child(make_card(selected, selected == captain))
+
