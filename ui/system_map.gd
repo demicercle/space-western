@@ -226,13 +226,8 @@ func refresh_scan_button() -> void:
 		scan_button.disabled = true
 		scan_button.tooltip_text = "Le vaisseau doit être en orbite autour d'un corps de ce système"
 		return
-	var sc: Variant = ship_body.get("scan", null)
-	if sc != null and bool(sc.get("ok", false)):
-		scan_button.disabled = true
-		scan_button.tooltip_text = "Corps déjà scanné (informations conservées)"
-	else:
-		scan_button.disabled = false
-		scan_button.tooltip_text = "Scan (1 h) : test de Senseurs difficulté 2 — détecte l'astroport et sa fréquence radio ; +1 info par succès excédentaire"
+	scan_button.disabled = false
+	scan_button.tooltip_text = "Scanner (1 h, rescan possible) : test de Senseurs difficulté 2 — détecte l'astroport et sa fréquence radio ; +1 info par succès excédentaire"
 
 func set_system(s: StarSystem) -> void:
 	sys = s

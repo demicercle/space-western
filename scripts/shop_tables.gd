@@ -69,15 +69,15 @@ const MARCHANDISES := [
 	{"nom": "Agroalimentaire (1 UC)", "prix": 250, "dispo": "C", "cat": "Marchandises", "note": "Produits agricoles/alimentaires en vrac. Achat : prix de revente ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Alcools (1 UC)", "prix": 1000, "dispo": "C", "cat": "Marchandises", "note": "Boissons alcoolisées. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Alliages raffinés (1 UC)", "prix": 5000, "dispo": "B", "cat": "Marchandises", "note": "Alliages industriels. Achat : ×3.", "place": 1.0, "achat_x3": true},
-	{"nom": "Armes (1 UC)", "prix": 5000, "dispo": "B", "cat": "Marchandises", "note": "Armes personnelles et protections en vrac. Achat : ×3.", "place": 1.0, "achat_x3": true},
+	{"nom": "Armes (1 UC)", "prix": 5000, "dispo": "B", "cat": "Marchandises", "note": "Armes personnelles et protections en vrac. Achat : ×3. Illégal.", "place": 1.0, "achat_x3": true, "illegal": true},
 	{"nom": "Artefacts archéologiques (1 UC)", "prix": 10000, "dispo": "A", "cat": "Marchandises", "note": "Vestiges des époques passées. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Artefacts technologiques (1 UC)", "prix": 10000, "dispo": "A", "cat": "Marchandises", "note": "High-tech de l'Âge des Conquêtes. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Babioles (1 UC)", "prix": 250, "dispo": "C", "cat": "Marchandises", "note": "Faux bijoux et gadgets. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Carburant (1 UC)", "prix": 500, "dispo": "B", "cat": "Marchandises", "note": "Carburants divers. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Conteneur vide (1 t)", "prix": 20, "dispo": "B", "cat": "Marchandises", "note": "Conteneur de 1 t. Coûte 100 € à l'achat, revente 20 €.", "place": 1.0, "prix_achat_base": 100},
 	{"nom": "Costumes de luxe (1 UC)", "prix": 1000, "dispo": "B", "cat": "Marchandises", "note": "Tenues de gala. Achat : ×3.", "place": 1.0, "achat_x3": true},
-	{"nom": "Drogues (1 UC)", "prix": 5000, "dispo": "A", "cat": "Marchandises", "note": "Illégal dans les nations stellaires (×1,5 si illégal ici). Achat : ×3.", "place": 1.0, "achat_x3": true},
-	{"nom": "Esclaves (10) (1 UC)", "prix": 2500, "dispo": "B", "cat": "Marchandises", "note": "10 esclaves par conteneur. Illégal dans les nations stellaires. Achat : ×3.", "place": 1.0, "achat_x3": true},
+	{"nom": "Drogues (1 UC)", "prix": 5000, "dispo": "A", "cat": "Marchandises", "note": "Illégal. Achat : ×3.", "place": 1.0, "achat_x3": true, "illegal": true},
+	{"nom": "Esclaves (10) (1 UC)", "prix": 2500, "dispo": "B", "cat": "Marchandises", "note": "10 esclaves par conteneur. Illégal. Achat : ×3.", "place": 1.0, "achat_x3": true, "illegal": true},
 	{"nom": "Matériel électronique (1 UC)", "prix": 2500, "dispo": "B", "cat": "Marchandises", "note": "Radios, modules-mémoire... Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Matériel industriel (1 UC)", "prix": 1000, "dispo": "B", "cat": "Marchandises", "note": "Matériel lourd pour usines et chantiers. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Médicaments (1 UC)", "prix": 2500, "dispo": "B", "cat": "Marchandises", "note": "Produits médicaux. Achat : ×3.", "place": 1.0, "achat_x3": true},
@@ -157,7 +157,10 @@ static func prix_achat(it: Dictionary, cours: Dictionary) -> int:
 		return -1
 	return int(round(float(prix_base(it)) * c))
 
-static func prix_vente(nom: String, cours: Dictionary, mod: float) -> int:
+static func est_illegal(it: Dictionary) -> bool:
+	return bool(it.get("illegal", false))
+
+static func prix_vente(nom: String, cours: Dictionary) -> int:
 	var it: Variant = find_catalogue(nom)
 	if it == null:
 		it = find_in(MARCHANDISES, nom)
@@ -168,4 +171,4 @@ static func prix_vente(nom: String, cours: Dictionary, mod: float) -> int:
 	var c: float = float(cours.get(str(it.get("dispo", "C")), 1.0))
 	if c <= 0.0:
 		return 0
-	return maxi(1, int(round(float(it["prix"]) * c * mod)))
+	return maxi(1, int(round(float(prix_base(it)) * c / 1.5)))
