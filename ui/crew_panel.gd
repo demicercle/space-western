@@ -74,14 +74,24 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	var sep2 := HSeparator.new()
 	vb.add_child(sep2)
 	var cml := Label.new()
-	cml.text = "Compétences"
+	cml.text = "Compétences (toutes, triées par domaine ; +0 en grisé)"
 	cml.add_theme_font_size_override("font_size", 12)
 	vb.add_child(cml)
-	for entry in c.comp:
-		var l := Label.new()
-		l.text = "  %s +%d (%s)" % [entry[0], entry[1], c.domaine_de(entry[0])]
-		l.add_theme_font_size_override("font_size", 11)
-		vb.add_child(l)
+	for d in NPCTables.DOMAINES:
+		var dl := Label.new()
+		dl.text = "%s :" % d
+		dl.add_theme_font_size_override("font_size", 11)
+		dl.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
+		vb.add_child(dl)
+		for cn in NPCTables.COMPETENCES[d]:
+			var base: String = str(cn).trim_suffix(" (au choix)")
+			var lv: int = c.get_comp(base)
+			var l := Label.new()
+			l.text = "    %s +%d" % [cn, lv]
+			l.add_theme_font_size_override("font_size", 11)
+			if lv == 0:
+				l.add_theme_color_override("font_color", Color(0.5, 0.52, 0.6))
+			vb.add_child(l)
 	var sep3 := HSeparator.new()
 	vb.add_child(sep3)
 	var sl := Label.new()

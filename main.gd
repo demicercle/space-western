@@ -1283,8 +1283,10 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, prel
 		system_map.set_journal(bb)
 
 func _on_recruit_found(c: Character) -> void:
+	avancer_heure(1)
 	recruit_panel.show_recrue(c)
-	_update_buttons()
+	refresh_all()
+	recruit_panel.set_message("Recrue trouvée (action de 1 h) — calendrier : %s, %d h · %d jour(s) écoulé(s)." % [MAUtils.galdate(jours_ecoules), heure_jour, jours_ecoules])
 
 func _on_recruit_hired(c: Character) -> void:
 	if not peut_recruter():

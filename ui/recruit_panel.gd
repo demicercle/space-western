@@ -20,7 +20,7 @@ func _ready() -> void:
 	vb.size_flags_horizontal = SIZE_EXPAND_FILL
 	add_child(vb)
 	var head := Label.new()
-	head.text = "Recruter un membre d'équipage (possible uniquement sur une planète ou une station-relais) :"
+	head.text = "Recruter un membre d'équipage (possible uniquement sur une planète ou une station-relais) — « Trouver une recrue » prend 1 heure :"
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	head.add_theme_font_size_override("font_size", 13)
 	head.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
@@ -57,6 +57,15 @@ func _ready() -> void:
 	recruter_btn.disabled = true
 	recruter_btn.pressed.connect(_on_recruter)
 	vb.add_child(recruter_btn)
+	var psep := HSeparator.new()
+	vb.add_child(psep)
+	var pl := Label.new()
+	pl.text = "Professions disponibles (canvas) :"
+	pl.add_theme_font_size_override("font_size", 12)
+	pl.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	vb.add_child(pl)
+	var pc := ProfessionsCanvas.new()
+	vb.add_child(pc)
 
 func _mk_label(t: String) -> Label:
 	var l := Label.new()
