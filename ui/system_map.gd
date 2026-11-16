@@ -10,6 +10,7 @@ class MapCanvas extends Control:
 	var ship_angle := 0.0
 	var ship_body: Variant = null
 	signal body_hit(body: Dictionary)
+	signal body_deselected
 
 	func _center() -> Vector2:
 		return size * 0.5
@@ -37,6 +38,9 @@ class MapCanvas extends Control:
 					body_hit.emit(body)
 					get_viewport().set_input_as_handled()
 					return
+		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+			body_deselected.emit()
+			get_viewport().set_input_as_handled()
 
 	func _draw() -> void:
 		if sys == null or size.x <= 0.0 or size.y <= 0.0:
@@ -147,6 +151,7 @@ func _ready() -> void:
 	canvas.custom_minimum_size = Vector2(380, 300)
 	canvas.mouse_filter = MOUSE_FILTER_STOP
 	canvas.body_hit.connect(_on_body_hit)
+	canvas.body_deselected.connect(_on_body_deselected)
 	add_child(canvas)
 	var right_bot := VBoxContainer.new()
 	right_bot.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -172,15 +177,23 @@ func _ready() -> void:
 func _on_body_hit(body: Dictionary) -> void:
 	select_body(body)
 
+func _on_body_deselected() -> void:
+	select_body(null)
+
 func select_body(body: Variant) -> void:
 	selected_body = body
 	canvas.selected_body = body
 	canvas.queue_redraw()
 	selected_dist = null
 	if body != null:
-		travel_button.disabled = false
+		travel_button.disabled = ship_body == body
 		travel_button.text = "Voyager vers %s" % str(body.get("nom", "?"))
-		travel_button.tooltip_text = "" if is_current_system else "Le vaisseau n'est pas dans ce système : l'itinéraire galactique sera tracé"
+		if ship_body == body:
+			travel_button.tooltip_text = "Le vaisseau est déjà sur ce corps"
+		elif not is_current_system:
+			travel_button.tooltip_text = "Le vaisseau n'est pas dans ce système : l'itinéraire galactique sera tracé"
+		else:
+			travel_button.tooltip_text = ""
 		if sys != null and ship_orbite >= 0.0:
 			selected_dist = StarSystem.distance_inter(ship_orbite, float(body["orbite"]))
 	else:
