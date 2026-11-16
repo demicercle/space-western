@@ -429,11 +429,17 @@ func _start_game() -> void:
 	ship_orbite_us = float(current_system.limite)
 	ship_angle = 0.0
 	for c in current_system.corps:
-		if c["type"] == "planète":
+		if c["type"] == "planète" and str(c.get("nom", "")) == current_system.nom:
 			ship_body = c
-			ship_orbite_us = float(c["orbite"])
-			ship_angle = current_system.angle_corps(c)
 			break
+	if ship_body == null:
+		for c in current_system.corps:
+			if c["type"] == "planète":
+				ship_body = c
+				break
+	if ship_body != null:
+		ship_orbite_us = float(ship_body["orbite"])
+		ship_angle = current_system.angle_corps(ship_body)
 	refresh_all()
 
 func get_system(cell: Vector2i) -> StarSystem:

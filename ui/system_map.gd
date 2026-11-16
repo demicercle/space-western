@@ -1,5 +1,5 @@
 class_name SystemMap
-extends HBoxContainer
+extends GridContainer
 
 signal travel_requested(body: Dictionary)
 
@@ -85,7 +85,8 @@ class MapCanvas extends Control:
 			draw_string(ThemeDB.fallback_font, sp + Vector2(10, -10), "Vaisseau (%s US)" % MAUtils.fmt_num(ship_orbite), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.45, 0.4))
 
 var canvas: MapCanvas
-var details: RichTextLabel
+var sys_details: RichTextLabel
+var body_details: RichTextLabel
 var travel_button: Button
 var sys_msg: Label
 var journal_label: RichTextLabel
@@ -98,49 +99,70 @@ var ship_body: Variant = null
 var is_current_system := true
 
 func _ready() -> void:
-	add_theme_constant_override("separation", 10)
-	canvas = MapCanvas.new()
-	canvas.size_flags_horizontal = SIZE_EXPAND_FILL
-	canvas.size_flags_vertical = SIZE_EXPAND_FILL
-	canvas.custom_minimum_size = Vector2(420, 420)
-	canvas.mouse_filter = MOUSE_FILTER_STOP
-	canvas.body_hit.connect(_on_body_hit)
-	add_child(canvas)
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = SIZE_EXPAND_FILL
-	right.custom_minimum_size = Vector2(360, 0)
-	right.add_theme_constant_override("separation", 6)
-	add_child(right)
+	columns = 2
+	add_theme_constant_override("h_separation", 10)
+	add_theme_constant_override("v_separation", 10)
+	size_flags_horizontal = SIZE_EXPAND_FILL
+	size_flags_vertical = SIZE_EXPAND_FILL
+	var sys_scroll := ScrollContainer.new()
+	sys_scroll.size_flags_horizontal = SIZE_EXPAND_FILL
+	sys_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	sys_scroll.custom_minimum_size = Vector2(340, 200)
+	add_child(sys_scroll)
+	sys_details = RichTextLabel.new()
+	sys_details.bbcode_enabled = true
+	sys_details.size_flags_horizontal = SIZE_EXPAND_FILL
+	sys_details.size_flags_vertical = SIZE_EXPAND_FILL
+	sys_details.scroll_active = true
+	sys_scroll.add_child(sys_details)
+	var right_top := VBoxContainer.new()
+	right_top.size_flags_horizontal = SIZE_EXPAND_FILL
+	right_top.size_flags_vertical = SIZE_EXPAND_FILL
+	right_top.add_theme_constant_override("separation", 6)
+	right_top.custom_minimum_size = Vector2(340, 200)
+	add_child(right_top)
 	travel_button = Button.new()
 	travel_button.text = "Voyager vers ce corps"
 	travel_button.disabled = true
 	travel_button.pressed.connect(_on_travel_pressed)
-	right.add_child(travel_button)
+	right_top.add_child(travel_button)
 	sys_msg = Label.new()
 	sys_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sys_msg.add_theme_font_size_override("font_size", 11)
 	sys_msg.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
-	right.add_child(sys_msg)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = SIZE_EXPAND_FILL
-	right.add_child(scroll)
-	details = RichTextLabel.new()
-	details.bbcode_enabled = true
-	details.size_flags_horizontal = SIZE_EXPAND_FILL
-	details.size_flags_vertical = SIZE_EXPAND_FILL
-	details.scroll_active = true
-	scroll.add_child(details)
+	right_top.add_child(sys_msg)
+	var body_scroll := ScrollContainer.new()
+	body_scroll.size_flags_horizontal = SIZE_EXPAND_FILL
+	body_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	right_top.add_child(body_scroll)
+	body_details = RichTextLabel.new()
+	body_details.bbcode_enabled = true
+	body_details.size_flags_horizontal = SIZE_EXPAND_FILL
+	body_details.size_flags_vertical = SIZE_EXPAND_FILL
+	body_details.scroll_active = true
+	body_scroll.add_child(body_details)
+	canvas = MapCanvas.new()
+	canvas.size_flags_horizontal = SIZE_EXPAND_FILL
+	canvas.size_flags_vertical = SIZE_EXPAND_FILL
+	canvas.custom_minimum_size = Vector2(380, 300)
+	canvas.mouse_filter = MOUSE_FILTER_STOP
+	canvas.body_hit.connect(_on_body_hit)
+	add_child(canvas)
+	var right_bot := VBoxContainer.new()
+	right_bot.size_flags_horizontal = SIZE_EXPAND_FILL
+	right_bot.size_flags_vertical = SIZE_EXPAND_FILL
+	right_bot.add_theme_constant_override("separation", 4)
+	right_bot.custom_minimum_size = Vector2(340, 160)
+	add_child(right_bot)
 	var jhead := Label.new()
 	jhead.text = "Journal de bord (voyages dans le système) :"
 	jhead.add_theme_font_size_override("font_size", 12)
 	jhead.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
-	right.add_child(jhead)
+	right_bot.add_child(jhead)
 	var jscroll := ScrollContainer.new()
 	jscroll.size_flags_horizontal = SIZE_EXPAND_FILL
 	jscroll.size_flags_vertical = SIZE_EXPAND_FILL
-	jscroll.custom_minimum_size = Vector2(0, 150)
-	right.add_child(jscroll)
+	right_bot.add_child(jscroll)
 	journal_label = RichTextLabel.new()
 	journal_label.bbcode_enabled = true
 	journal_label.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -227,7 +249,8 @@ func _body_bb(body: Dictionary) -> String:
 
 func _render_details() -> void:
 	if sys == null:
-		details.text = ""
+		sys_details.text = ""
+		body_details.text = ""
 		return
 	var bb := "[b][color=gold]%s[/color][/b]\n" % sys.nom
 	if not is_current_system:
@@ -248,21 +271,23 @@ func _render_details() -> void:
 		["Corps célestes", ", ".join(corps_noms)],
 	]
 	bb += _table_bb(rows)
+	sys_details.text = bb
+	var bb2 := ""
 	if is_current_system:
-		bb += "\n[b]Position du vaisseau[/b] : "
+		sys_details.text += "\n[b]Position du vaisseau[/b] : "
 		if ship_body != null:
-			bb += "%s (orbite %s US)\n" % [str(ship_body.get("nom", "?")), MAUtils.fmt_num(float(ship_body["orbite"]))]
+			sys_details.text += "%s (orbite %s US)\n" % [str(ship_body.get("nom", "?")), MAUtils.fmt_num(float(ship_body["orbite"]))]
 		else:
-			bb += "limite de saut du système (%d US)\n" % sys.limite
+			sys_details.text += "limite de saut du système (%d US)\n" % sys.limite
 	if selected_body != null and sys.corps.has(selected_body):
-		bb += _body_bb(selected_body)
+		bb2 += _body_bb(selected_body)
 	else:
-		bb += "\n[i]Cliquez sur un corps céleste de la carte pour afficher sa description.[/i]\n"
+		bb2 += "[i]Cliquez sur un corps céleste de la carte (en bas à gauche) pour afficher sa description.[/i]\n"
 		for body in sys.corps:
-			bb += "▸ %s — orbite %s US\n" % [str(body.get("nom", "?")), MAUtils.fmt_num(float(body["orbite"]))]
+			bb2 += "▸ %s — orbite %s US\n" % [str(body.get("nom", "?")), MAUtils.fmt_num(float(body["orbite"]))]
 	if sys.ceinture != null:
-		bb += "\n▸ %s, orbite %s US\n" % [str(sys.ceinture["nom"]), MAUtils.fmt_num(float(sys.ceinture["orbite"]))]
-	details.text = bb
+		bb2 += "\n▸ %s, orbite %s US\n" % [str(sys.ceinture["nom"]), MAUtils.fmt_num(float(sys.ceinture["orbite"]))]
+	body_details.text = bb2
 
 func set_message(t: String) -> void:
 	sys_msg.text = t
