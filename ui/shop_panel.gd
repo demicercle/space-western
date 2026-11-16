@@ -3,7 +3,7 @@ extends VBoxContainer
 
 signal buy_requested(item: Dictionary)
 
-const TAB_TITLES := ["Marchandises", "Technologie courante", "Technologie militaire", "Technologie médicale"]
+const TAB_TITLES := ["Marchandises", "Technologie courante", "Technologie militaire", "Technologie médicale", "La belle vie"]
 
 var title_label: Label
 var info_label: Label
@@ -39,6 +39,8 @@ static func _tab_of(cat: String) -> int:
 		return 3
 	if cat == "Technologie courante" or cat == "Station-relais":
 		return 1
+	if cat == "La belle vie":
+		return 4
 	return 0
 
 func _ready() -> void:

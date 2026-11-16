@@ -68,6 +68,20 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 	var pieces := int(cfg.get("pieces", 0))
 	var geo = cfg.get("dep", null) != null and cfg.get("arr", null) != null
 	var saut_use := false
+	var d_pi := int(cfg.get("dpi", 0))
+	var m_pi: String = str(cfg.get("mpi", ""))
+	var d_na := int(cfg.get("dna", 0))
+	var m_na: String = str(cfg.get("mna", ""))
+	var d_se := int(cfg.get("dse", 0))
+	var m_se: String = str(cfg.get("mse", ""))
+	var d_ss := int(cfg.get("dss", 0))
+	var m_ss: String = str(cfg.get("mss", ""))
+	var d_ae := int(cfg.get("dae", 0))
+	var m_ae: String = str(cfg.get("mae", ""))
+	var d_ig := int(cfg.get("ding", 0))
+	var m_ig: String = str(cfg.get("ming", ""))
+	var d_ca := int(cfg.get("dca", 0))
+	var m_ca: String = str(cfg.get("mca", ""))
 
 	if hyper:
 		var na1: int = cfg.get("p1na", 0)
@@ -80,7 +94,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 			var exc := 0
 			var ok := false
 			while essais < 200:
-				var r := Dice.test(na_saut, 1, mode_saut)
+				var r := Dice.test(na_saut, 1 + d_na, m_na if m_na != "" else mode_saut)
 				essais += 1
 				if r["ok"]:
 					ok = true
@@ -115,7 +129,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 			if pieces > 0:
 				pieces -= 1
 				T["pieces_used"] += 1
-				r = Dice.test(ig, p["d"], "TD" if p.get("td", false) else "normal")
+				r = Dice.test(ig, p["d"] + d_ig, m_ig if m_ig != "" else ("TD" if p.get("td", false) else "normal"))
 			else:
 				r = {"ok": false, "succ": 0, "extra": 0, "dice": [], "mode": "normal"}
 				j["lignes"].append("Réparation de la « %s » impossible : plus de pièces détachées en soute." % p["nom"])
@@ -163,7 +177,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 				elif mod["sens_muets"]:
 					pl["detail"].append("Senseurs hors service : le péril ne peut pas être repéré.")
 				else:
-					var r := Dice.test(vi_se, int(s_need))
+					var r := Dice.test(vi_se, int(s_need) + d_se, m_se if m_se != "" else "normal")
 					pl["repere"] = r["ok"]
 					pl["detail"].append("Détection (Vigie %d, Senseurs, %d succès) : %s : %s" % [actif, int(s_need), Dice.fmt_jet(r), "repéré" if r["ok"] else "non repéré"])
 				if pl["repere"]:
@@ -174,7 +188,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 					elif ss_need is String and ss_need == "X":
 						pl["detail"].append("Identification : impossible (aucune science ne l'explique).")
 					else:
-						var rv := Dice.test(vi_ss, int(ss_need))
+						var rv := Dice.test(vi_ss, int(ss_need) + d_ss, m_ss if m_ss != "" else "normal")
 						pl["ident"] = rv["ok"]
 						pl["detail"].append("Identification (Sciences stellaires %d succès, Vigie %d) : %s : %s" % [ss_need, actif, Dice.fmt_jet(rv), "identifié" if rv["ok"] else "non identifié"])
 				match P.get("eff", ""):
@@ -214,19 +228,19 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 				if P.get("combat", false):
 					var evite := false
 					if pl["repere"] and pl["ident"]:
-						var r1 := Dice.test(pi, 2, pil_mode.call())
+						var r1 := Dice.test(pi, 2 + d_pi, m_pi if m_pi != "" else pil_mode.call())
 						if r1["ok"]:
 							evite = true
 							pl["issue"] = "Esquivé : Pilotage (2), %s." % Dice.fmt_jet(r1)
 						else:
-							var r2 := Dice.test(ae, 3)
+							var r2 := Dice.test(ae, 3 + d_ae, m_ae if m_ae != "" else "normal")
 							if r2["ok"]:
 								evite = true
 								pl["issue"] = "Repoussé : Pilotage (2) raté (%s), Armes embarquées (3), %s." % [Dice.fmt_jet(r1), Dice.fmt_jet(r2)]
 							else:
 								pl["issue"] = "Dégâts subis : %s (Pilotage raté : %s · Armes embarquées ratées : %s)." % [P["deg"], Dice.fmt_jet(r1), Dice.fmt_jet(r2)]
 					elif pl["repere"]:
-						var r1 := Dice.test(pi, 2, pil_mode.call())
+						var r1 := Dice.test(pi, 2 + d_pi, m_pi if m_pi != "" else pil_mode.call())
 						if r1["ok"]:
 							evite = true
 							pl["issue"] = "Esquivé de justesse (repéré mais non identifié) : Pilotage (2), %s." % Dice.fmt_jet(r1)
@@ -253,7 +267,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 					if not sans_pieces:
 						pieces -= 1
 						T["pieces_used"] += 1
-						r = Dice.test(ig, rd, "TD" if rtd else "normal")
+						r = Dice.test(ig, rd + d_ig, m_ig if m_ig != "" else ("TD" if rtd else "normal"))
 					else:
 						r = {"ok": false, "succ": 0, "extra": 0, "dice": [], "mode": "normal"}
 					if r["ok"]:
@@ -305,7 +319,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 				elif pil_mode.call() == "dead":
 					j["lignes"].append(nom_action + " : impossible (Pilotage hors service).")
 				else:
-					var r := Dice.test(pi, 1, pil_mode.call())
+					var r := Dice.test(pi, 1 + d_pi, m_pi if m_pi != "" else pil_mode.call())
 					if r["ok"] and r["extra"] > 0:
 						bonus = r["extra"] * (100.0 if hyper else 1.0)
 						j["lignes"].append("%s (Pilote %d, (1)) : %s : +%s %s gratuits." % [nom_action, actif, Dice.fmt_jet(r), MAUtils.fmt_num(bonus), unite])
@@ -370,7 +384,7 @@ static func simulate(cfg: Dictionary) -> Dictionary:
 			if p.get("eau", false):
 				T["eau_pct"] += 10.0
 		if ca > 0 and not retard:
-			var r := Dice.test(ca, 3)
+			var r := Dice.test(ca, 3 + d_ca, m_ca if m_ca != "" else "normal")
 			if r["ok"]:
 				T["releves"] += 1
 				if hyper and j.has("case"):

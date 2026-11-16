@@ -48,6 +48,7 @@ var pending_virer: Character = null
 var panel_style: StyleBoxFlat
 var ship_health_label: Label
 var ship_health_bar: ProgressBar
+var radix_label: Label
 var itineraire_label: Label
 var pause_menu: PopupMenu
 
@@ -100,6 +101,10 @@ func _build_left_panel() -> void:
 	ship_health_bar.show_percentage = false
 	ship_health_bar.custom_minimum_size = Vector2(0, 10)
 	shb.add_child(ship_health_bar)
+	radix_label = Label.new()
+	radix_label.add_theme_font_size_override("font_size", 12)
+	radix_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+	left_vbox.add_child(radix_label)
 	credits_label = Label.new()
 	credits_label.add_theme_font_size_override("font_size", 14)
 	credits_label.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
@@ -162,7 +167,7 @@ func _build_tabs() -> void:
 	plein_button.pressed.connect(_on_faire_le_plein)
 	btns.add_child(plein_button)
 	calc_button = Button.new()
-	calc_button.text = "Calculer le voyage"
+	calc_button.text = "Voyager"
 	calc_button.disabled = true
 	calc_button.pressed.connect(_on_calc_voyage)
 	btns.add_child(calc_button)
@@ -230,12 +235,28 @@ func _build_pause_menu() -> void:
 	pause_menu.id_pressed.connect(_on_pause_id)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	var k := event as InputEventKey
+	if k.keycode == KEY_F1:
 		if pause_menu.visible:
 			pause_menu.hide()
 		else:
 			pause_menu.set_item_checked(2, DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
 			pause_menu.popup_centered()
+		get_viewport().set_input_as_handled()
+	elif k.keycode == KEY_TAB:
+		var n := tabs.get_tab_count()
+		for i in range(1, n + 1):
+			var j := (tabs.current_tab + i) % n
+			if not tabs.is_tab_disabled(j):
+				tabs.current_tab = j
+				break
+		get_viewport().set_input_as_handled()
+	elif k.keycode >= KEY_1 and k.keycode <= KEY_9:
+		var t: int = k.keycode - KEY_1
+		if t < tabs.get_tab_count() and not tabs.is_tab_disabled(t):
+			tabs.current_tab = t
 		get_viewport().set_input_as_handled()
 
 func _on_pause_id(id: int) -> void:
@@ -283,12 +304,15 @@ func _cheat_quick_recruit() -> void:
 	ing.post_index = 2
 	var ca := Character.generate("Héros", "Premier rôle", "Canonnier")
 	ca.post_index = 3
+	var total := 0
 	for c in [pi, vi, ing, ca]:
 		characters.append(c)
 		make_token(c)
+		total += c.prix_recrutement
+	credits = maxi(0, credits - total)
 	if captain == null:
 		captain = characters[0]
-	msg_label.text = "Quick recruit : %s (Pilote), %s (Vigie), %s (Ingénieur), %s (Canonnier) recrutés et postés." % [pi.nom, vi.nom, ing.nom, ca.nom]
+	msg_label.text = "Quick recruit : %s (Pilote), %s (Vigie), %s (Ingénieur), %s (Canonnier) recrutés et postés — payé %s €." % [pi.nom, vi.nom, ing.nom, ca.nom, MAUtils.fmt_int(total)]
 	refresh_all()
 
 func _appliquer_sante_voyage(res: Dictionary) -> void:
@@ -358,7 +382,7 @@ func _itineraire_txt() -> String:
 	if absf(jours - roundf(jours)) < 0.001:
 		j_r = int(round(jours))
 	var rations := j_r * characters.size()
-	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (%d à bord)" % [MAUtils.fmt_int(distance), duree, rations, characters.size()]
+	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (en soute : %d)" % [MAUtils.fmt_int(distance), duree, rations, ship.rations]
 
 func _start_game() -> void:
 	game_seed = randi()
@@ -442,7 +466,7 @@ func _on_buy(it: Dictionary) -> void:
 	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + 1
 	if it["nom"] == "Ration":
 		ship.rations = int(ship.cargaison["Ration"])
-	shop_panel.set_message("Acheté : %s pour %s € (en soute)." % [it["nom"], MAUtils.fmt_int(prix)])
+	shop_panel.set_message("Acheté : %s pour %s € (%d en soute)." % [it["nom"], MAUtils.fmt_int(prix), int(ship.cargaison[it["nom"]])])
 	refresh_all()
 
 func _on_sell(nom: String) -> void:
@@ -583,6 +607,22 @@ func _on_cell_clicked(col: int, row: int) -> void:
 	_update_info_label()
 	_update_buttons()
 
+func _sante_mod(c: Character) -> Array:
+	var idx := c.sante_index()
+	if idx == 1:
+		return [1, ""]
+	if idx == 2:
+		return [0, "TD"]
+	if idx == 3:
+		return [0, "dead"]
+	return [0, ""]
+
+func _blocage_sante() -> String:
+	for c in characters:
+		if c.post_index >= 0 and (post_name_static(c.post_index) == "Pilote" or post_name_static(c.post_index) == "Vigie") and c.sante_index() >= 3:
+			return "\n/!\\ %s est « Mort? » : voyage impossible tant qu'il n'est pas remplacé." % c.nom
+	return ""
+
 func can_travel() -> bool:
 	var has_pilot := false
 	var has_vigie := false
@@ -591,8 +631,12 @@ func can_travel() -> bool:
 			continue
 		match post_name_static(c.post_index):
 			"Pilote":
+				if c.sante_index() >= 3:
+					return false
 				has_pilot = true
 			"Vigie":
+				if c.sante_index() >= 3:
+					return false
 				has_vigie = true
 	return has_pilot and has_vigie
 
@@ -613,7 +657,7 @@ func _update_info_label() -> void:
 	var dest_name: String = named["nom"] if named != null else "case inconnue"
 	var extra := ""
 	if not can_travel():
-		extra = "\n/!\\ Calculer un voyage exige un Pilote ET une Vigie à leur poste."
+		extra = "\n/!\\ Voyager exige un Pilote ET une Vigie à leur poste." + _blocage_sante()
 	info_label.text = "%s\nDestination : %s — %s (%s)\nDistance : %s PC (1 case = 1 000 PC) · Vitesse : %d PC/j · Route : %s%s" % [
 		pos_txt,
 		dest_name, GalaxyData.coord_label(destination.x, destination.y), GalaxyData.coord_text(destination.x, destination.y),
@@ -630,25 +674,40 @@ func _update_buttons() -> void:
 	recruit_panel.set_enabled_state(dk, credits, characters.size(), ship.passagers_max)
 
 func _post_skills() -> Dictionary:
-	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0}
+	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0, "dpi": 0, "mpi": "", "dna": 0, "mna": "", "dse": 0, "mse": "", "dss": 0, "mss": "", "ding": 0, "ming": "", "dae": 0, "mae": "", "dca": 0, "mca": ""}
 	for c in characters:
 		if c.post_index < 0:
 			continue
+		var m := _sante_mod(c)
 		match post_name_static(c.post_index):
 			"Pilote":
 				sk["pi"] = c.get_comp("Pilotage")
 				sk["na"] = c.get_comp("Navigation")
+				sk["dpi"] = m[0]
+				sk["mpi"] = m[1]
+				sk["dna"] = m[0]
+				sk["mna"] = m[1]
 			"Vigie":
 				sk["se"] = c.get_comp("Senseurs")
 				sk["ss"] = c.get_comp("Sciences stellaires")
+				sk["dse"] = m[0]
+				sk["mse"] = m[1]
+				sk["dss"] = m[0]
+				sk["mss"] = m[1]
 			"Ingénieur":
 				sk["ing"] = c.get_comp("Ingénierie")
+				sk["ding"] = m[0]
+				sk["ming"] = m[1]
 			"Canonnier":
 				sk["cae"] = c.get_comp("Armes embarquées")
+				sk["dae"] = m[0]
+				sk["mae"] = m[1]
 			"Cartographe / Historien":
 				sk["carto"] = c.get_comp("Cartographie")
 				if sk["carto"] == 0:
 					sk["carto"] = maxi(c.get_comp("Navigation"), c.get_comp("Histoire"))
+				sk["dca"] = m[0]
+				sk["mca"] = m[1]
 	return sk
 
 func _on_faire_le_plein() -> void:
@@ -694,6 +753,10 @@ func _on_calc_voyage() -> void:
 		"p1pi": sk["pi"], "p1na": sk["na"], "p2pi": sk["pi"], "p2na": sk["na"],
 		"v1se": sk["se"], "v1ss": sk["ss"], "v2se": sk["se"], "v2ss": sk["ss"],
 		"cae": sk["cae"], "ing": sk["ing"], "carto": sk["carto"],
+		"dpi": sk["dpi"], "mpi": sk["mpi"], "dna": sk["dna"], "mna": sk["mna"],
+		"dse": sk["dse"], "mse": sk["mse"], "dss": sk["dss"], "mss": sk["mss"],
+		"dae": sk["dae"], "mae": sk["mae"], "ding": sk["ding"], "ming": sk["ming"],
+		"dca": sk["dca"], "mca": sk["mca"],
 		"equip": characters.size(),
 		"passagers": 0,
 		"tonnage": ship.tonnage,
@@ -761,8 +824,10 @@ func _on_voyage_inter(body: Dictionary) -> void:
 		return
 	var dep_o := ship_orbite_us
 	var arr_o := float(body["orbite"])
-	var a2 := current_system.angle_corps(body)
-	var dist := sqrt(maxf(0.0, dep_o * dep_o + arr_o * arr_o - 2.0 * dep_o * arr_o * cos(a2 - ship_angle)))
+	var di: Variant = system_map.selected_dist
+	if di == null or system_map.selected_body != body:
+		di = StarSystem.distance_inter(dep_o, arr_o)
+	var dist: float = di["dist"]
 	if dist < 0.0001:
 		system_map.set_message("Le vaisseau est déjà à la hauteur de %s." % str(body.get("nom", "?")))
 		return
@@ -779,6 +844,10 @@ func _on_voyage_inter(body: Dictionary) -> void:
 		"p1pi": sk["pi"], "p1na": sk["na"], "p2pi": sk["pi"], "p2na": sk["na"],
 		"v1se": sk["se"], "v1ss": sk["ss"], "v2se": sk["se"], "v2ss": sk["ss"],
 		"cae": sk["cae"], "ing": sk["ing"], "carto": sk["carto"],
+		"dpi": sk["dpi"], "mpi": sk["mpi"], "dna": sk["dna"], "mna": sk["mna"],
+		"dse": sk["dse"], "mse": sk["mse"], "dss": sk["dss"], "mss": sk["mss"],
+		"dae": sk["dae"], "mae": sk["mae"], "ding": sk["ding"], "ming": sk["ming"],
+		"dca": sk["dca"], "mca": sk["mca"],
 		"equip": characters.size(),
 		"passagers": 0,
 		"tonnage": ship.tonnage,
@@ -908,6 +977,7 @@ func _on_recruit_hired(c: Character) -> void:
 func refresh_all() -> void:
 	ship_name_label.text = "Vaisseau : %s (%s) — %s" % [ship.nom, ship.modele, GalaxyData.coord_label(current_pos.x, current_pos.y)]
 	refresh_ship_health()
+	radix_label.text = "Radix : %s / %s PC" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
 	credits_label.text = "Crédits : %s €" % MAUtils.fmt_int(credits)
 	captain_label.text = "Capitaine : %s" % (captain.nom if captain != null else "—")
 	for c in characters:

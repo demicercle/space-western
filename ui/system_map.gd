@@ -83,6 +83,7 @@ var travel_button: Button
 var sys_msg: Label
 var sys: StarSystem
 var selected_body: Variant = null
+var selected_dist: Variant = null
 var ship_orbite := -1.0
 var ship_angle := 0.0
 var ship_body: Variant = null
@@ -129,9 +130,12 @@ func select_body(body: Variant) -> void:
 	selected_body = body
 	canvas.selected_body = body
 	canvas.queue_redraw()
+	selected_dist = null
 	if body != null:
 		travel_button.disabled = false
 		travel_button.text = "Voyager vers %s" % str(body.get("nom", "?"))
+		if sys != null and ship_orbite >= 0.0:
+			selected_dist = StarSystem.distance_inter(ship_orbite, float(body["orbite"]))
 	else:
 		travel_button.disabled = true
 		travel_button.text = "Voyager vers ce corps"
@@ -166,11 +170,10 @@ func _body_bb(body: Dictionary) -> String:
 	if body.get("description", "") != "":
 		bb += "    [i]%s[/i]\n" % body["description"]
 	if ship_orbite >= 0.0:
-		var r1 := ship_orbite
-		var r2 := float(body["orbite"])
-		var a2 := sys.angle_corps(body)
-		var d := sqrt(maxf(0.0, r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * cos(a2 - ship_angle)))
-		bb += "    Distance depuis le vaisseau : %s US\n" % MAUtils.fmt_num(d)
+		var di: Variant = selected_dist
+		if di == null or body != selected_body:
+			di = StarSystem.distance_inter(ship_orbite, float(body["orbite"]))
+		bb += "    Distance depuis le vaisseau : %s US (tableau des distances : 1d6 = %d%s)\n" % [MAUtils.fmt_num(di["dist"]), di["de"], ", autre côté du soleil" if di["autre_cote"] else ""]
 	return bb
 
 func _render_details() -> void:

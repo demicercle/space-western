@@ -120,15 +120,18 @@ func domaine_de(comp_name: String) -> String:
 			return d
 	return ""
 
-func sante_txt() -> String:
+func sante_index() -> int:
 	if pv <= 0:
-		return niveaux_sante[niveaux_sante.size() - 1]
+		return niveaux_sante.size() - 1
 	var ratio := float(pv) / maxf(1.0, float(pv_max))
 	if ratio > 2.0 / 3.0:
-		return niveaux_sante[0]
+		return 0
 	if ratio > 1.0 / 3.0:
-		return niveaux_sante[1]
-	return niveaux_sante[2]
+		return 1
+	return 2
+
+func sante_txt() -> String:
+	return niveaux_sante[sante_index()]
 
 func fiche_txt() -> String:
 	var lines: Array = []

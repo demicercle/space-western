@@ -307,6 +307,16 @@ func coord_txt() -> String:
 func angle_corps(c: Dictionary) -> float:
 	return float(corps.find(c)) * 2.399 + float(c["orbite"]) * 0.7
 
+static func distance_inter(r1: float, r2: float) -> Dictionary:
+	var de := Dice.d6()
+	var autre := de > 5
+	var dist: float
+	if autre:
+		dist = r1 + r2 + (de - 5) * 0.5
+	else:
+		dist = absf(r2 - r1) + de * 0.5
+	return {"dist": dist, "de": de, "autre_cote": autre}
+
 func peut_amarrer() -> bool:
 	for c in corps:
 		if c["type"] == "planète" or c["type"] == "station":
