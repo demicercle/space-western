@@ -145,14 +145,17 @@ static func place_de(nom: String) -> float:
 static func find_marchandise(nom: String) -> Variant:
 	return find_in(MARCHANDISES, nom)
 
+static func prix_base(it: Dictionary) -> int:
+	var base: float = float(it.get("prix_achat_base", 0.0))
+	if base <= 0.0:
+		base = float(it["prix"]) * (3.0 if bool(it.get("achat_x3", false)) else 1.0)
+	return int(round(base))
+
 static func prix_achat(it: Dictionary, cours: Dictionary) -> int:
 	var c: float = float(cours.get(str(it.get("dispo", "C")), 1.0))
 	if c <= 0.0:
 		return -1
-	var base: float = float(it.get("prix_achat_base", 0.0))
-	if base <= 0.0:
-		base = float(it["prix"]) * (3.0 if bool(it.get("achat_x3", false)) else 1.0)
-	return int(round(base * c))
+	return int(round(float(prix_base(it)) * c))
 
 static func prix_vente(nom: String, cours: Dictionary, mod: float) -> int:
 	var it: Variant = find_catalogue(nom)

@@ -2,7 +2,7 @@ class_name ShopPanel
 extends VBoxContainer
 
 signal buy_requested(item: Dictionary)
-signal search_requested
+signal search_requested(illegal: bool)
 
 const TAB_TITLES := ["Marchandises", "Technologie courante", "Technologie militaire", "Technologie médicale", "La belle vie"]
 
@@ -18,6 +18,7 @@ var soute_max := 25.0
 var docked := false
 var est_relais := false
 var search_button: Button
+var noir_button: Button
 var cours: Dictionary = {"A": 1.0, "B": 1.0, "C": 1.0}
 
 static var _re_us := RegEx.create_from_string("\\bUS\\b")
@@ -64,8 +65,12 @@ func _ready() -> void:
 	add_child(hb)
 	search_button = Button.new()
 	search_button.text = "Rechercher des articles"
-	search_button.pressed.connect(_on_search)
+	search_button.pressed.connect(_on_search.bind(false))
 	hb.add_child(search_button)
+	noir_button = Button.new()
+	noir_button.text = "Marché noir (illégal)"
+	noir_button.pressed.connect(_on_search.bind(true))
+	hb.add_child(noir_button)
 	msg_label = Label.new()
 	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	msg_label.add_theme_font_size_override("font_size", 12)
@@ -108,12 +113,16 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	est_relais = p_est_relais
 	var prix_over: Dictionary = p_prix
 	search_button.disabled = not p_docked or est_relais
+	noir_button.disabled = not p_docked or est_relais
 	if est_relais:
 		search_button.tooltip_text = "Comptoir OCG : tarifs fixes, pas de recherche nécessaire"
+		noir_button.tooltip_text = "Comptoir OCG : tarifs fixes, pas de marché noir"
 	elif not p_docked:
 		search_button.tooltip_text = "Recherche impossible hors planète/station-relais"
+		noir_button.tooltip_text = "Marché noir inaccessible hors planète/station-relais"
 	else:
 		search_button.tooltip_text = "Le capitaine teste chaque article (Recherche) — l'action consomme 1 jour (MdJ p271)"
+		noir_button.tooltip_text = "Recherche illégale (Illégalités) : articles à prix de base ≥ 50 €, prix divisé par 1,5 — 1 jour"
 	title_label.text = titre
 	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible hors planète/station-relais)"]
 	for grid in grids:
@@ -125,8 +134,11 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		grid.add_child(_header_cell("Prix"))
 	for it in items:
 		var grid: GridContainer = grids[_tab_of(str(it.get("cat", "")))]
+		var nom: String = str(it["nom"])
 		var nom_l := Label.new()
-		nom_l.text = str(it["nom"])
+		nom_l.text = nom
+		if prix_over.has(nom) and bool(prix_over[nom].get("noir", false)):
+			nom_l.text += " (marché noir)"
 		nom_l.custom_minimum_size = Vector2(230, 0)
 		nom_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nom_l.add_theme_font_size_override("font_size", 12)
@@ -141,7 +153,6 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 8)
 		cell.custom_minimum_size = Vector2(190, 0)
-		var nom: String = str(it["nom"])
 		var prix := ShopTables.prix_achat(it, cours)
 		var override: bool = prix_over.has(nom)
 		if override:
@@ -179,8 +190,8 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	if p_docked and not est_relais and items.size() == 0:
 		set_message("Aucun article trouvé pour l'instant — cliquez sur « Rechercher des articles ».")
 
-func _on_search() -> void:
-	search_requested.emit()
+func _on_search(illegal: bool) -> void:
+	search_requested.emit(illegal)
 
 func _on_buy(it: Dictionary) -> void:
 	buy_requested.emit(it)

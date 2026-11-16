@@ -569,7 +569,7 @@ func _test_marchandage() -> String:
 	marchandage_mod = mod
 	return "Marchandage à l'arrivée — Commerce du capitaine %s : %s contre marchand %s : %s → prix de vente ×%s (plafonds 50 %%–150 %% du prix de base)." % [captain.nom, Dice.fmt_jet(r), Dice.fmt_jet(m), txt, MAUtils.fmt_num(mod)]
 
-func _on_rechercher() -> void:
+func _on_rechercher(illegal := false) -> void:
 	if not docked():
 		shop_panel.set_message("Recherche d'articles impossible hors planète/station-relais.")
 		return
@@ -586,6 +586,7 @@ func _on_rechercher() -> void:
 	var est_pauvre := com.contains("pauvre")
 	var est_primitive := com.contains("primitive")
 	var liste: Array = ShopTables.CATALOGUE + ShopTables.MARCHANDISES
+	var comp_key := "Illégalités" if illegal else "Recherche"
 	var tests := 0
 	var nouveaux := 0
 	var log := ""
@@ -597,15 +598,20 @@ func _on_rechercher() -> void:
 			continue
 		if articles_trouves.has(nom):
 			continue
+		var base_prix: int = ShopTables.prix_base(it) if illegal else ShopTables.prix_achat(it, cours)
+		if illegal and base_prix < 50:
+			continue
 		tests += 1
-		var base_prix: int = ShopTables.prix_achat(it, cours)
-		if dispo == "C" and base_prix <= 10:
-			articles_trouves[nom] = {"prix": base_prix, "base": base_prix, "mod": 1.0}
+		var prix_ref := base_prix
+		if illegal:
+			prix_ref = maxi(1, int(round(float(base_prix) / 1.5)))
+		if not illegal and dispo == "C" and base_prix <= 10:
+			articles_trouves[nom] = {"prix": base_prix, "base": base_prix, "mod": 1.0, "noir": false}
 			nouveaux += 1
 			log += "  [color=7bed9f]Trouvé : %s[/color] — dispo C et prix ≤ 10 € : trouvé automatiquement, pas de marchandage : [b]%s €[/b]\n" % [nom, MAUtils.fmt_int(base_prix)]
 			continue
 		var diff: int = int(round(c * 2.0))
-		var nd: int = captain.get_comp("Recherche")
+		var nd: int = captain.get_comp(comp_key)
 		var mods := ""
 		var mode := "normal"
 		if est_primitive:
@@ -615,9 +621,11 @@ func _on_rechercher() -> void:
 			nd += 1
 			mods += " +1d (carrefour)"
 		if dispo == "C":
-			nd += 1
 			mode = "TF"
-			mods += " +1d (dispo C) · TF"
+			mods += " (TF, dispo C)"
+		if illegal:
+			diff += 1
+			mods += " D+1 (marché noir)"
 		if dispo == "A":
 			diff += 1
 			mods += " D+1 (dispo A)"
@@ -633,31 +641,38 @@ func _on_rechercher() -> void:
 			continue
 		var mod := 1.0
 		var verdict := "égalité"
-		var prix_n := base_prix
+		var prix_n := prix_ref
 		var nego := ""
-		if base_prix <= 10:
+		if prix_ref <= 10:
 			verdict = "pas de marchandage (prix ≤ 10 €)"
 		else:
 			var marchand: Character = Character.generate("Héros" if est_carrefour else "Normal", "Figurant", "Marchand")
 			var rc := Dice.test(captain.get_comp("Commerce"), 1)
 			var rm := Dice.test(marchand.get_comp("Commerce"), 1)
+			var extra := 0
 			if rc["succ"] > rm["succ"]:
-				mod = 1.0 - 0.05 * float(rc["succ"] - rm["succ"])
+				extra = mini(5, rc["succ"] - rm["succ"])
+				mod = 1.0 - 0.05 * float(extra)
 				verdict = "capitaine gagne"
 			elif rm["succ"] > rc["succ"]:
-				mod = 1.0 + 0.05 * float(rm["succ"] - rc["succ"])
+				extra = mini(5, rm["succ"] - rc["succ"])
+				mod = 1.0 + 0.05 * float(extra)
 				verdict = "marchand gagne"
-			prix_n = maxi(1, int(round(float(base_prix) * mod)))
-			nego = " · opposition Commerce %s vs marchand %s (%s) → ×%s" % [Dice.fmt_jet(rc), Dice.fmt_jet(rm), verdict, MAUtils.fmt_num(mod)]
-		articles_trouves[nom] = {"prix": prix_n, "base": base_prix, "mod": mod}
+			prix_n = maxi(1, int(round(float(prix_ref) * mod)))
+			nego = " · opposition Commerce %s vs marchand %s (%s) → ×%s (plafonné ±25 %%)" % [Dice.fmt_jet(rc), Dice.fmt_jet(rm), verdict, MAUtils.fmt_num(mod)]
+		articles_trouves[nom] = {"prix": prix_n, "base": prix_ref, "mod": mod, "noir": illegal}
 		nouveaux += 1
-		log += "  [color=7bed9f]Trouvé : %s[/color] — Recherche %s (diff %d%s) : OK%s : [b]%s €[/b] (base %s €)\n" % [nom, Dice.fmt_jet(r), diff, mods, nego, MAUtils.fmt_int(prix_n), MAUtils.fmt_int(base_prix)]
+		var tag := ""
+		if illegal:
+			tag = " [color=ff9966](marché noir : base catalogue %s € → prix noir %s €)[/color]" % [MAUtils.fmt_int(base_prix), MAUtils.fmt_int(prix_ref)]
+		log += "  [color=7bed9f]Trouvé : %s[/color]%s — %s %s (diff %d%s) : OK%s : [b]%s €[/b] (base %s €)\n" % [nom, tag, comp_key, Dice.fmt_jet(r), diff, mods, nego, MAUtils.fmt_int(prix_n), MAUtils.fmt_int(prix_ref)]
 	corps_recherche = ship_body
 	avancer_jours(1)
 	refresh_all()
-	shop_panel.set_message("Recherche d'articles à %s (%s) : %d test(s) de Recherche, +1 jour (durée de l'action « Faire ses courses », MdJ p271) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()])
+	var titre_rech := "Recherche illégale (marché noir)" if illegal else "Recherche d'articles"
+	shop_panel.set_message("%s à %s (%s) : %d test(s) de %s, +1 jour (durée « Faire ses courses », MdJ p271) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [titre_rech, str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, comp_key, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()])
 	if log != "":
-		journal.text += "\n[b][color=gold]Recherche d'articles — %s, %s (année %d)[/color][/b]\n" % [MAUtils.galdate(jours_ecoules), str(sb.get("nom", "?")), MAUtils.annee_galactique(jours_ecoules)] + log
+		journal.text += "\n[b][color=gold]%s — %s, %s (année %d)[/color][/b]\n" % [titre_rech, MAUtils.galdate(jours_ecoules), str(sb.get("nom", "?")), MAUtils.annee_galactique(jours_ecoules)] + log
 
 func nb_posts() -> int:
 	return mini(POSTS.size(), ship.equipage_postes)
