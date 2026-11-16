@@ -36,6 +36,16 @@ static func letter_symbol(col: int) -> String:
 	var l: String = LETTERS[(col - 1) % 24]
 	return l + "′" if col > 24 else l
 
+static func col_of(letter: String) -> int:
+	var l := letter
+	var primed := l.ends_with("′")
+	if primed:
+		l = l.substr(0, l.length() - 1)
+	var i := LETTERS.find(l)
+	if i < 0:
+		return -1
+	return i + 1 + (24 if primed else 0)
+
 static func letter_name(col: int) -> String:
 	var l: String = LETTER_NAMES[(col - 1) % 24]
 	return l + "'" if col > 24 else l

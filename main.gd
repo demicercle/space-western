@@ -147,6 +147,7 @@ func _build_tabs() -> void:
 	galaxy_map.size_flags_horizontal = SIZE_EXPAND_FILL
 	galaxy_map.size_flags_vertical = SIZE_EXPAND_FILL
 	galaxy_map.cell_clicked.connect(_on_cell_clicked)
+	galaxy_map.cell_right_clicked.connect(_on_cell_right_clicked)
 	hb.add_child(galaxy_map)
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(380, 0)
@@ -648,6 +649,19 @@ func _on_cell_clicked(col: int, row: int) -> void:
 	_update_buttons()
 	_update_system_tab()
 
+func _on_cell_right_clicked(col: int, row: int) -> void:
+	var cell := Vector2i(col, row)
+	galaxy_map.selected_cell = cell
+	destination = Vector2i(-1, -1)
+	distance = 0
+	galaxy_map.destination = destination
+	galaxy_map.queue_redraw()
+	msg_label.text = ""
+	_update_info_label()
+	_update_buttons()
+	_update_system_tab()
+	tabs.current_tab = 1
+
 func _update_system_tab() -> void:
 	var sel := galaxy_map.selected_cell
 	if sel.x < 0:
@@ -924,7 +938,21 @@ func _on_voyage_inter(body: Dictionary) -> void:
 	if body == null or current_system == null:
 		return
 	if system_map.sys != current_system:
-		system_map.set_message("Ce système n'est pas le système actuel du vaisseau : voyage interplanétaire impossible.")
+		var col := GalaxyData.col_of(system_map.sys.quad_x)
+		var row := int(system_map.sys.quad_y)
+		if col > 0:
+			var cell := Vector2i(col, row)
+			galaxy_map.selected_cell = cell
+			destination = cell
+			distance = GalaxyData.distance_pc(current_pos, destination)
+			galaxy_map.destination = destination
+			galaxy_map.queue_redraw()
+			tabs.current_tab = 0
+			msg_label.text = "Itinéraire calculé vers %s (%s) — cliquez sur « Voyager »." % [system_map.sys.nom, GalaxyData.coord_label(col, row)]
+			system_map.set_message("Système %s : itinéraire tracé sur la carte galactique." % system_map.sys.nom)
+			_update_info_label()
+			_update_buttons()
+			_update_system_tab()
 		return
 	if not can_travel():
 		system_map.set_message("Voyage interplanétaire impossible : il faut un Pilote ET une Vigie à leur poste.")

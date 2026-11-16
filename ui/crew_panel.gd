@@ -85,7 +85,7 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	var sep3 := HSeparator.new()
 	vb.add_child(sep3)
 	var sl := Label.new()
-	sl.text = "Santé : %d PV/niveau · %d/%d PV · %s\nNiveaux : %s\nPanache %d · Gloire %d" % [c.pv_par_niveau, c.pv, c.pv_max, c.sante_txt(), " · ".join(c.niveaux_sante), c.panache, c.gloire]
+	sl.text = "Santé : %d PV/niveau · %d/%d PV · %s\nNiveaux : %s" % [c.pv_par_niveau, c.pv, c.pv_max, c.sante_txt(), " · ".join(c.niveaux_sante)]
 	sl.add_theme_font_size_override("font_size", 11)
 	vb.add_child(sl)
 	if c.defauts.size() > 0 or c.qualites.size() > 0:

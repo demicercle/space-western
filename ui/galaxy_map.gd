@@ -2,6 +2,7 @@ class_name GalaxyMap
 extends Control
 
 signal cell_clicked(col: int, row: int)
+signal cell_right_clicked(col: int, row: int)
 
 var map_tex: Texture2D
 var current_pos := GalaxyData.EXXALIA
@@ -58,6 +59,11 @@ func _gui_input(event: InputEvent) -> void:
 		_layout()
 		var c := _cell_at(event.position)
 		cell_clicked.emit(c.x, c.y)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		_layout()
+		var c := _cell_at(event.position)
+		cell_right_clicked.emit(c.x, c.y)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion:
 		var c := _cell_at(event.position)

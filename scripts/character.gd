@@ -17,8 +17,7 @@ var niveaux_sante: Array = []
 var pv_par_niveau := 0
 var pv_max := 0
 var pv := 0
-var panache := 0
-var gloire := 0
+
 var defauts: Array = []
 var qualites: Array = []
 var post_index := -1
@@ -81,9 +80,6 @@ static func generate(puissance := "Héros", role := "Premier rôle", profession 
 		if i < pool2.size():
 			c.comp.append([pool2[i], cvals[i]])
 	c.domaines = p["dom"].duplicate()
-	var pg: Array = NPCTables.ROLES_PG[role]
-	c.panache = pg[0]
-	c.gloire = pg[1]
 	c.niveaux_sante = NPCTables.ROLES_SANTE[role]
 	c.pv_par_niveau = c.caracs["Carrure"] + c.caracs["Sang-froid"]
 	c.pv_max = c.pv_par_niveau * maxi(1, c.niveaux_sante.size() - 1)
@@ -145,7 +141,7 @@ func fiche_txt() -> String:
 	for entry in comp:
 		lines.append("  %s +%d (%s)" % [entry[0], entry[1], domaine_de(entry[0])])
 	lines.append("Santé : %d PV/niveau (%s) — %d/%d PV, %s" % [pv_par_niveau, " · ".join(niveaux_sante), pv, pv_max, sante_txt()])
-	lines.append("Panache %d · Gloire %d" % [panache, gloire])
+
 	for t in defauts:
 		lines.append("Défaut — %s (%d) : %s" % [t[0], t[1], t[2]])
 	for q in qualites:

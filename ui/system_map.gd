@@ -156,10 +156,9 @@ func select_body(body: Variant) -> void:
 	canvas.queue_redraw()
 	selected_dist = null
 	if body != null:
-		travel_button.disabled = not is_current_system
+		travel_button.disabled = false
 		travel_button.text = "Voyager vers %s" % str(body.get("nom", "?"))
-		if not is_current_system:
-			travel_button.tooltip_text = "Voyage interplanétaire possible uniquement dans le système actuel du vaisseau"
+		travel_button.tooltip_text = "" if is_current_system else "Le vaisseau n'est pas dans ce système : l'itinéraire galactique sera tracé"
 		if sys != null and ship_orbite >= 0.0:
 			selected_dist = StarSystem.distance_inter(ship_orbite, float(body["orbite"]))
 	else:
@@ -169,7 +168,7 @@ func select_body(body: Variant) -> void:
 	_render_details()
 
 func _on_travel_pressed() -> void:
-	if selected_body != null and is_current_system:
+	if selected_body != null:
 		travel_requested.emit(selected_body)
 
 func set_system(s: StarSystem) -> void:
@@ -190,31 +189,65 @@ func set_ship_pos(o: float, angle: float, body: Variant) -> void:
 	canvas.queue_redraw()
 	_render_details()
 
+static func _table_bb(rows: Array) -> String:
+	var bb := "[table=2]"
+	for r in rows:
+		bb += "[cell][b]%s[/b][/cell][cell]%s[/cell]" % [str(r[0]), str(r[1])]
+	bb += "[/table]\n"
+	return bb
+
 func _body_bb(body: Dictionary) -> String:
-	var bb := "\n[color=cyan]▸ %s[/color] — %s, orbite %s US (saut : %s US)\n" % [body.get("nom", "?"), body.get("classe", body["type"]), MAUtils.fmt_num(float(body["orbite"])), MAUtils.fmt_num(float(body["distance_saut"]))]
-	for k in ["diametre", "atmosphere", "environnement", "temperature", "gravite", "eau", "habitee", "population", "densite", "categorie", "niveau_techno", "gouvernement", "commerce", "cours", "illegal", "astroport", "securite", "systeme_orbital"]:
-		if body.has(k) and str(body[k]) != "" and str(body[k]) != "false":
-			bb += "    %s : %s\n" % [k, body[k]]
+	var rows: Array = [
+		["Système planétaire", "%s (%s-%d)" % [sys.nom, sys.quad_x, sys.quad_y]],
+		["Orbite", "%s US" % MAUtils.fmt_num(float(body["orbite"]))],
+		["Distance de saut", "%s US" % MAUtils.fmt_num(float(body["distance_saut"]))],
+		["Classe", str(body.get("classe", body["type"]))],
+	]
+	var keys := [
+		["systeme_orbital", "Système orbital"], ["diametre", "Diamètre"], ["atmosphere", "Atmosphère"],
+		["environnement", "Environnement"], ["temperature", "Température"], ["gravite", "Gravité"],
+		["eau", "Eau"], ["habitee", "Habitée"], ["population", "Population"], ["densite", "Densité"],
+		["categorie", "Catégorie"], ["niveau_techno", "Niveau technologique"], ["gouvernement", "Gouvernement"],
+		["commerce", "Commerce"], ["cours", "Cours des marchandises"], ["illegal", "Marchandises illégales"],
+		["astroport", "Astroport"], ["securite", "Sécurité"],
+	]
+	for kv in keys:
+		if body.has(kv[0]) and str(body[kv[0]]) != "" and str(body[kv[0]]) != "false":
+			rows.append([kv[1], str(body[kv[0]])])
+	var bb := "\n[b][color=cyan]▸ %s[/color][/b]\n" % str(body.get("nom", "?"))
+	bb += _table_bb(rows)
 	if body.get("description", "") != "":
-		bb += "    [i]%s[/i]\n" % body["description"]
+		bb += "[i]%s[/i]\n" % str(body["description"])
 	if ship_orbite >= 0.0:
 		var di: Variant = selected_dist
 		if di == null or body != selected_body:
 			di = StarSystem.distance_inter(ship_orbite, float(body["orbite"]))
-		bb += "    Distance depuis le vaisseau : %s US (tableau des distances : 1d6 = %d%s)\n" % [MAUtils.fmt_num(di["dist"]), di["de"], ", autre côté du soleil" if di["autre_cote"] else ""]
+		bb += "Distance depuis le vaisseau : %s US (tableau des distances : 1d6 = %d%s)\n" % [MAUtils.fmt_num(di["dist"]), int(di["de"]), ", autre côté du soleil" if di["autre_cote"] else ""]
 	return bb
 
 func _render_details() -> void:
 	if sys == null:
 		details.text = ""
 		return
-	var bb := "[b][color=gold]%s[/color][/b] (%s-%d)\n" % [sys.nom, sys.quad_x, sys.quad_y]
+	var bb := "[b][color=gold]%s[/color][/b]\n" % sys.nom
 	if not is_current_system:
 		bb += "[i]Système affiché : case sélectionnée sur la carte galactique — le vaisseau n'est pas dans ce système (informations en lecture seule).[/i]\n"
-	bb += "Étoile : %s, diamètre %s · Limite : %d US\n" % [sys.etoile, sys.diam_etoile, sys.limite]
-	bb += "Nation : %s\nRoute : %s\nGouvernement : %s\n" % [sys.nation, sys.route, sys.gouvernement]
-	bb += "Patrouille : %s (coût %s) · Trafic : %s — %s\n" % [sys.patrouille, sys.cout_pat, sys.trafic, sys.trafic_desc]
-	bb += "Activité solaire : %s (%s près de l'étoile)\n" % [sys.act_solaire, sys.act_solaire_proche]
+	var corps_noms := []
+	for body in sys.corps:
+		corps_noms.append(str(body.get("nom", "?")))
+	var rows: Array = [
+		["Coordonnées", "%s-%d (%s)" % [sys.quad_x, sys.quad_y, GalaxyData.coord_label(GalaxyData.col_of(sys.quad_x), sys.quad_y) if GalaxyData.col_of(sys.quad_x) > 0 else "%s-%d" % [sys.quad_x, sys.quad_y]]],
+		["Étoile", "%s, diamètre %s" % [sys.etoile, sys.diam_etoile]],
+		["Limite de saut", "%d US" % sys.limite],
+		["Nationalité", sys.nation],
+		["Route", sys.route],
+		["Gouvernement", sys.gouvernement],
+		["Patrouilles", "%s%s" % [sys.patrouille, (" (coût %s)" % sys.cout_pat) if sys.cout_pat != "" else ""]],
+		["Trafic", "%s — %s" % [sys.trafic, sys.trafic_desc]],
+		["Activité solaire", "%s (%s près de l'étoile)" % [sys.act_solaire, sys.act_solaire_proche]],
+		["Corps célestes", ", ".join(corps_noms)],
+	]
+	bb += _table_bb(rows)
 	if is_current_system:
 		bb += "\n[b]Position du vaisseau[/b] : "
 		if ship_body != null:
@@ -226,9 +259,9 @@ func _render_details() -> void:
 	else:
 		bb += "\n[i]Cliquez sur un corps céleste de la carte pour afficher sa description.[/i]\n"
 		for body in sys.corps:
-			bb += "▸ %s — orbite %s US\n" % [body.get("nom", "?"), MAUtils.fmt_num(float(body["orbite"]))]
+			bb += "▸ %s — orbite %s US\n" % [str(body.get("nom", "?")), MAUtils.fmt_num(float(body["orbite"]))]
 	if sys.ceinture != null:
-		bb += "\n▸ %s, orbite %s US\n" % [sys.ceinture["nom"], MAUtils.fmt_num(float(sys.ceinture["orbite"]))]
+		bb += "\n▸ %s, orbite %s US\n" % [str(sys.ceinture["nom"]), MAUtils.fmt_num(float(sys.ceinture["orbite"]))]
 	details.text = bb
 
 func set_message(t: String) -> void:
