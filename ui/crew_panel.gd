@@ -59,12 +59,12 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	var sep := HSeparator.new()
 	vb.add_child(sep)
 	var cl := Label.new()
-	cl.text = "Caractéristiques & compétences (5 colonnes : 1 colonne = 1 caractéristique = 1 domaine = ses compétences ; +0 en grisé)"
+	cl.text = "Caractéristiques & compétences (6 colonnes : 1 colonne = 1 caractéristique = 1 domaine = ses compétences ; +0 en grisé)"
 	cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cl.add_theme_font_size_override("font_size", 12)
 	vb.add_child(cl)
 	var grid := GridContainer.new()
-	grid.columns = 5
+	grid.columns = 6
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 8)
 	vb.add_child(grid)
