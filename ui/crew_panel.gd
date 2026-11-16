@@ -1,7 +1,6 @@
 class_name CrewPanel
 extends VBoxContainer
 
-var selector: HBoxContainer
 var card_scroll: ScrollContainer
 var card_holder: VBoxContainer
 var characters: Array = []
@@ -11,13 +10,10 @@ var captain: Character = null
 func _ready() -> void:
 	add_theme_constant_override("separation", 8)
 	var head := Label.new()
-	head.text = "Équipage — sélectionnez un membre pour afficher sa fiche :"
+	head.text = "Équipage — cliquez sur un personnage dans la liste de gauche pour afficher sa fiche :"
 	head.add_theme_font_size_override("font_size", 13)
 	head.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	add_child(head)
-	selector = HBoxContainer.new()
-	selector.add_theme_constant_override("separation", 6)
-	add_child(selector)
 	card_scroll = ScrollContainer.new()
 	card_scroll.size_flags_vertical = SIZE_EXPAND_FILL
 	add_child(card_scroll)
@@ -113,16 +109,6 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 func set_characters(chars: Array, cap: Character = null) -> void:
 	characters = chars
 	captain = cap
-	for ch in selector.get_children():
-		selector.remove_child(ch)
-		ch.queue_free()
-	for c in characters:
-		var b := Button.new()
-		b.text = ("♛ " if c == captain else "") + c.nom
-		b.toggle_mode = true
-		b.button_pressed = c == selected
-		b.pressed.connect(_on_select.bind(c))
-		selector.add_child(b)
 	if selected != null and not characters.has(selected):
 		selected = null
 	if selected == null and characters.size() > 0:
@@ -133,17 +119,6 @@ func select_character(c: Character) -> void:
 	if not characters.has(c):
 		return
 	selected = c
-	for ch in selector.get_children():
-		if ch is Button:
-			var b := ch as Button
-			b.button_pressed = b.text.ends_with(c.nom)
-	_refresh_card()
-
-func _on_select(c: Character) -> void:
-	selected = c
-	for ch in selector.get_children():
-		if ch is Button:
-			(ch as Button).button_pressed = (ch as Button).text.ends_with(c.nom)
 	_refresh_card()
 
 func _refresh_card() -> void:

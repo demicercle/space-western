@@ -125,7 +125,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var prix_l := Label.new()
 		prix_l.text = ("—" if prix < 0 else "%s €" % MAUtils.fmt_int(prix))
 		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
-		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		prix_l.add_theme_font_size_override("font_size", 12)
 		cell.add_child(prix_l)
 		var btn := Button.new()

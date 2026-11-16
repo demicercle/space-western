@@ -9,6 +9,7 @@ const SHIP_NAMES := ["La Guigne", "Black Pearl", "Vengeance", "L'Étoile Filante
 
 @onready var left_vbox: VBoxContainer = %LeftVBox
 @onready var tabs: TabContainer = %Tabs
+@onready var pause_button: Button = %PauseButton
 
 var ship: Ship
 var characters: Array = []
@@ -34,6 +35,7 @@ var recruit_panel: RecruitPanel
 var marchandage_mod := 1.0
 var posts_container: VBoxContainer
 var ship_name_label: Label
+var pos_label: Label
 var credits_label: Label
 var captain_label: Label
 var info_label: Label
@@ -64,6 +66,7 @@ func _ready() -> void:
 	_build_tabs()
 	_build_context_menu()
 	_build_pause_menu()
+	pause_button.pressed.connect(_toggle_pause_menu)
 	_start_game()
 
 func _setup_theme() -> void:
@@ -88,6 +91,10 @@ func _build_left_panel() -> void:
 	ship_name_label.add_theme_font_size_override("font_size", 16)
 	ship_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	left_vbox.add_child(ship_name_label)
+	pos_label = Label.new()
+	pos_label.add_theme_font_size_override("font_size", 12)
+	pos_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+	left_vbox.add_child(pos_label)
 	var shb := VBoxContainer.new()
 	shb.add_theme_constant_override("separation", 2)
 	left_vbox.add_child(shb)
@@ -232,18 +239,23 @@ func _build_pause_menu() -> void:
 	pause_menu.add_item("Cheat : +1 000 €", 3)
 	pause_menu.add_item("Cheat : +1 000 Radix", 4)
 	pause_menu.add_item("Cheat : quick recruit (Pilote+Vigie+Ingénieur+Canonnier)", 5)
+	pause_menu.add_item("Cheat : +100 rations", 6)
+	pause_menu.add_item("Cheat : soin de groupe (tout l'équipage indemne)", 7)
 	pause_menu.id_pressed.connect(_on_pause_id)
+
+func _toggle_pause_menu() -> void:
+	if pause_menu.visible:
+		pause_menu.hide()
+	else:
+		pause_menu.set_item_checked(2, DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
+		pause_menu.popup_centered()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	var k := event as InputEventKey
 	if k.keycode == KEY_F1:
-		if pause_menu.visible:
-			pause_menu.hide()
-		else:
-			pause_menu.set_item_checked(2, DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
-			pause_menu.popup_centered()
+		_toggle_pause_menu()
 		get_viewport().set_input_as_handled()
 	elif k.keycode == KEY_TAB:
 		var n := tabs.get_tab_count()
@@ -283,6 +295,16 @@ func _on_pause_id(id: int) -> void:
 			refresh_all()
 		5:
 			_cheat_quick_recruit()
+		6:
+			ship.rations += 100
+			ship.cargaison["Ration"] = ship.rations
+			msg_label.text = "Cheat : +100 rations (total : %d)." % ship.rations
+			refresh_all()
+		7:
+			for c in characters:
+				c.pv = c.pv_max
+			msg_label.text = "Cheat : soin de groupe — tout l'équipage est indemne."
+			refresh_all()
 
 func _cheat_quick_recruit() -> void:
 	if characters.size() > 0:
@@ -318,9 +340,19 @@ func _cheat_quick_recruit() -> void:
 func _appliquer_sante_voyage(res: Dictionary) -> void:
 	var T: Dictionary = res["resume"]
 	var cons_r: int = int(T["rations"])
-	var rations_avant: int = ship.rations
-	var famine_j := maxi(0, cons_r - rations_avant)
-	ship.rations = maxi(0, rations_avant - cons_r)
+	var repas: int = int(ship.cargaison.get("Repas", 0))
+	var total := ship.rations + repas
+	var famine_j := maxi(0, cons_r - total)
+	var use_repas := mini(repas, cons_r)
+	var use_ration := mini(ship.rations, maxi(0, cons_r - repas))
+	if use_repas > 0:
+		T["repas_utilises"] = use_repas
+		var reste_repas := repas - use_repas
+		if reste_repas <= 0:
+			ship.cargaison.erase("Repas")
+		else:
+			ship.cargaison["Repas"] = reste_repas
+	ship.rations = maxi(0, ship.rations - use_ration)
 	ship.cargaison["Ration"] = ship.rations
 	T["famine_jours"] = famine_j
 	var sante: Array = []
@@ -382,7 +414,8 @@ func _itineraire_txt() -> String:
 	if absf(jours - roundf(jours)) < 0.001:
 		j_r = int(round(jours))
 	var rations := j_r * characters.size()
-	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (en soute : %d)" % [MAUtils.fmt_int(distance), duree, rations, ship.rations]
+	var en_soute := ship.rations + int(ship.cargaison.get("Repas", 0))
+	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (en soute : %d)" % [MAUtils.fmt_int(distance), duree, rations, en_soute]
 
 func _start_game() -> void:
 	game_seed = randi()
@@ -931,6 +964,8 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, lign
 	if T["majeurs"].size() > 0:
 		bb += "Événements majeurs : " + " ; ".join(T["majeurs"]) + "\n"
 	bb += "Radix consommé : %s PC (réserve restante : %s / %s PC) · Rations consommées : %d (reste %d)\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), T["rations"], ship.rations]
+	if int(T.get("repas_utilises", 0)) > 0:
+		bb += "Repas consommés en priorité comme rations : %d (reste %s).\n" % [int(T["repas_utilises"]), MAUtils.fmt_int(int(ship.cargaison.get("Repas", 0)))]
 	if T["rations"] > 0 and ship.rations == 0:
 		bb += "[color=ff5544]Famine à bord : les rations sont épuisées ![/color]\n"
 	if int(T.get("famine_jours", 0)) > 0:
@@ -948,7 +983,10 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, lign
 	if ligne_march != "":
 		bb += "[color=gold]" + ligne_march + "[/color]\n"
 	bb += "Bonus de pilotage gagnés : +%s PC\n" % MAUtils.fmt_num(T["bonus"])
-	journal.text = bb
+	if geo:
+		journal.text = bb
+	else:
+		system_map.set_journal(bb)
 
 func _on_recruit_found(c: Character) -> void:
 	recruit_panel.show_recrue(c)
@@ -975,7 +1013,8 @@ func _on_recruit_hired(c: Character) -> void:
 	refresh_all()
 
 func refresh_all() -> void:
-	ship_name_label.text = "Vaisseau : %s (%s) — %s" % [ship.nom, ship.modele, GalaxyData.coord_label(current_pos.x, current_pos.y)]
+	ship_name_label.text = "Vaisseau : %s (%s)" % [ship.nom, ship.modele]
+	pos_label.text = "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	refresh_ship_health()
 	radix_label.text = "Radix : %s / %s PC" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
 	credits_label.text = "Crédits : %s €" % MAUtils.fmt_int(credits)

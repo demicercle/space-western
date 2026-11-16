@@ -32,25 +32,35 @@ layout_mode = 2
 [node name="RightVBox" type="VBoxContainer" parent="HSplit"]
 layout_mode = 2
 
-[node name="Tabs" type="TabContainer" parent="HSplit/RightVBox"]
-unique_name_in_owner = true
+[node name="TopBar" type="HBoxContainer" parent="HSplit/RightVBox"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 8
 
-[node name="TabGalaxie" type="Control" parent="HSplit/RightVBox/Tabs"]
+[node name="Tabs" type="TabContainer" parent="HSplit/RightVBox/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PauseButton" type="Button" parent="HSplit/RightVBox/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Pause (F1)"
+
+[node name="TabGalaxie" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 layout_mode = 2
 
-[node name="TabSysteme" type="Control" parent="HSplit/RightVBox/Tabs"]
+[node name="TabSysteme" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 layout_mode = 2
 
-[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/Tabs"]
+[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 layout_mode = 2
 
-[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/Tabs"]
+[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 layout_mode = 2
 
-[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/Tabs"]
+[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 layout_mode = 2
 
-[node name="TabRecruter" type="Control" parent="HSplit/RightVBox/Tabs"]
+[node name="TabRecruter" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 layout_mode = 2

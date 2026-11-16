@@ -8,6 +8,7 @@ class MapCanvas extends Control:
 	var selected_body: Variant = null
 	var ship_orbite := -1.0
 	var ship_angle := 0.0
+	var ship_body: Variant = null
 	signal body_hit(body: Dictionary)
 
 	func _center() -> Vector2:
@@ -73,14 +74,21 @@ class MapCanvas extends Control:
 				draw_arc(p, 13.0, 0.0, TAU, 32, Color(1.0, 0.85, 0.3, 0.95), 2.0)
 			i += 1
 		if ship_orbite >= 0.0:
+			if ship_body != null and sys.corps.has(ship_body):
+				draw_arc(body_pos(ship_body), 15.0, 0.0, TAU, 32, Color(1, 1, 1, 0.8), 1.5)
 			var sp := ship_pos()
-			draw_colored_polygon([sp + Vector2(0, -8), sp + Vector2(6, 7), sp + Vector2(-6, 7)], Color(0.5, 0.9, 1.0))
-			draw_string(ThemeDB.fallback_font, sp + Vector2(9, -9), "Vaisseau (%d US)" % int(round(ship_orbite)), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.5, 0.9, 1.0))
+			var col := Color(1.0, 0.25, 0.2)
+			draw_line(sp + Vector2(-8, -8), sp + Vector2(8, 8), Color(0, 0, 0, 0.85), 3.5)
+			draw_line(sp + Vector2(-8, 8), sp + Vector2(8, -8), Color(0, 0, 0, 0.85), 3.5)
+			draw_line(sp + Vector2(-8, -8), sp + Vector2(8, 8), col, 1.6)
+			draw_line(sp + Vector2(-8, 8), sp + Vector2(8, -8), col, 1.6)
+			draw_string(ThemeDB.fallback_font, sp + Vector2(10, -10), "Vaisseau (%d US)" % int(round(ship_orbite)), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.45, 0.4))
 
 var canvas: MapCanvas
 var details: RichTextLabel
 var travel_button: Button
 var sys_msg: Label
+var journal_label: RichTextLabel
 var sys: StarSystem
 var selected_body: Variant = null
 var selected_dist: Variant = null
@@ -122,6 +130,21 @@ func _ready() -> void:
 	details.size_flags_vertical = SIZE_EXPAND_FILL
 	details.scroll_active = true
 	scroll.add_child(details)
+	var jhead := Label.new()
+	jhead.text = "Journal de bord (voyages dans le système) :"
+	jhead.add_theme_font_size_override("font_size", 12)
+	jhead.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	right.add_child(jhead)
+	var jscroll := ScrollContainer.new()
+	jscroll.size_flags_horizontal = SIZE_EXPAND_FILL
+	jscroll.size_flags_vertical = SIZE_EXPAND_FILL
+	jscroll.custom_minimum_size = Vector2(0, 150)
+	right.add_child(jscroll)
+	journal_label = RichTextLabel.new()
+	journal_label.bbcode_enabled = true
+	journal_label.size_flags_horizontal = SIZE_EXPAND_FILL
+	journal_label.scroll_active = true
+	jscroll.add_child(journal_label)
 
 func _on_body_hit(body: Dictionary) -> void:
 	select_body(body)
@@ -159,6 +182,7 @@ func set_ship_pos(o: float, angle: float, body: Variant) -> void:
 	ship_body = body
 	canvas.ship_orbite = o
 	canvas.ship_angle = angle
+	canvas.ship_body = body
 	canvas.queue_redraw()
 	_render_details()
 
@@ -202,3 +226,6 @@ func _render_details() -> void:
 
 func set_message(t: String) -> void:
 	sys_msg.text = t
+
+func set_journal(t: String) -> void:
+	journal_label.text = t
