@@ -200,32 +200,31 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		cell.add_theme_constant_override("separation", 8)
 		cell.custom_minimum_size = Vector2(190, 0)
 		var prix := ShopTables.prix_achat(it, cours)
+		var prix_l := Label.new()
+		prix_l.text = ("—" if prix < 0 else "%s €" % MAUtils.fmt_int(prix))
+		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
+		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		prix_l.add_theme_font_size_override("font_size", 12)
+		cell.add_child(prix_l)
 		if soute.has(nom) and int(soute[nom]) > 0:
 			var own := Label.new()
-			own.text = "en soute ×%d (voir à gauche pour vendre)" % int(soute[nom])
+			own.text = "en soute ×%d" % int(soute[nom])
 			own.add_theme_font_size_override("font_size", 11)
 			own.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 			cell.add_child(own)
-		else:
-			var prix_l := Label.new()
-			prix_l.text = ("—" if prix < 0 else "%s €" % MAUtils.fmt_int(prix))
-			prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
-			prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			prix_l.add_theme_font_size_override("font_size", 12)
-			cell.add_child(prix_l)
-			var btn := Button.new()
-			btn.text = "Acheter"
-			var trop_cher := prix >= 0 and credits < prix
-			var plus_de_place := soute_used + float(it["place"]) > soute_max + 0.0001
-			btn.disabled = not docked or prix < 0 or trop_cher or plus_de_place
-			if prix < 0:
-				btn.tooltip_text = "Achat impossible ici (cours ×0 pour la catégorie %s)" % str(it.get("dispo", "?"))
-			elif trop_cher:
-				btn.tooltip_text = "Crédits insuffisants"
-			elif plus_de_place:
-				btn.tooltip_text = "Plus de place en soute"
-			btn.pressed.connect(_on_buy.bind(it))
-			cell.add_child(btn)
+		var btn := Button.new()
+		btn.text = "Acheter"
+		var trop_cher := prix >= 0 and credits < prix
+		var plus_de_place := soute_used + float(it["place"]) > soute_max + 0.0001
+		btn.disabled = not docked or prix < 0 or trop_cher or plus_de_place
+		if prix < 0:
+			btn.tooltip_text = "Achat impossible ici (cours ×0 pour la catégorie %s)" % str(it.get("dispo", "?"))
+		elif trop_cher:
+			btn.tooltip_text = "Crédits insuffisants"
+		elif plus_de_place:
+			btn.tooltip_text = "Plus de place en soute"
+		btn.pressed.connect(_on_buy.bind(it))
+		cell.add_child(btn)
 		grid.add_child(cell)
 	var counts := [0, 0, 0, 0, 0]
 	for it in items:
