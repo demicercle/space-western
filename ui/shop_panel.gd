@@ -113,7 +113,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	elif not p_docked:
 		search_button.tooltip_text = "Recherche impossible hors planète/station-relais"
 	else:
-		search_button.tooltip_text = "Le capitaine teste chaque article (Recherche) : 1 jour par test"
+		search_button.tooltip_text = "Le capitaine teste chaque article (Recherche) — l'action consomme 1 jour (MdJ p271)"
 	title_label.text = titre
 	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible hors planète/station-relais)"]
 	for grid in grids:
@@ -150,7 +150,12 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		if prix < 0:
 			prix_l.text = "—"
 		elif override:
-			prix_l.text = "%s € (base : %s €)" % [MAUtils.fmt_int(prix), MAUtils.fmt_int(int(prix_over[nom]["base"]))]
+			var base_aff: int = int(prix_over[nom]["base"])
+			prix_l.text = "%s € (base : %s €)" % [MAUtils.fmt_int(prix), MAUtils.fmt_int(base_aff)]
+			if prix > base_aff:
+				prix_l.add_theme_color_override("font_color", Color(1.0, 0.65, 0.3))
+			elif prix < base_aff:
+				prix_l.add_theme_color_override("font_color", Color(0.55, 0.9, 0.55))
 		else:
 			prix_l.text = "%s €" % MAUtils.fmt_int(prix)
 		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL

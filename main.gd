@@ -585,7 +585,6 @@ func _on_rechercher() -> void:
 	var est_carrefour := com.contains("carrefour")
 	var est_pauvre := com.contains("pauvre")
 	var est_primitive := com.contains("primitive")
-	var mode := "TD" if est_primitive else "normal"
 	var liste: Array = ShopTables.CATALOGUE + ShopTables.MARCHANDISES
 	var tests := 0
 	var nouveaux := 0
@@ -599,51 +598,64 @@ func _on_rechercher() -> void:
 		if articles_trouves.has(nom):
 			continue
 		tests += 1
+		var base_prix: int = ShopTables.prix_achat(it, cours)
+		if dispo == "C" and base_prix <= 10:
+			articles_trouves[nom] = {"prix": base_prix, "base": base_prix, "mod": 1.0}
+			nouveaux += 1
+			log += "  [color=7bed9f]Trouvé : %s[/color] — dispo C et prix ≤ 10 € : trouvé automatiquement, pas de marchandage : [b]%s €[/b]\n" % [nom, MAUtils.fmt_int(base_prix)]
+			continue
 		var diff: int = int(round(c * 2.0))
 		var nd: int = captain.get_comp("Recherche")
 		var mods := ""
+		var mode := "normal"
+		if est_primitive:
+			mode = "TD"
+			mods += " (TD : planète primitive)"
 		if est_carrefour:
 			nd += 1
 			mods += " +1d (carrefour)"
 		if dispo == "C":
 			nd += 1
-			mods += " +1d (dispo C)"
+			mode = "TF"
+			mods += " +1d (dispo C) · TF"
 		if dispo == "A":
 			diff += 1
 			mods += " D+1 (dispo A)"
 		var cat: String = str(it.get("cat", ""))
-		if cat == "Technologie militaire" or cat == "Technologie spatiale":
+		if (cat == "Technologie militaire" or cat == "Technologie spatiale") and base_prix > 100:
 			diff += 1
-			mods += " D+1 (%s)" % cat.to_lower()
+			mods += " D+1 (%s, prix > 100 €)" % cat.to_lower()
 		if est_pauvre:
 			diff += 1
 			mods += " D+1 (planète pauvre)"
-		if est_primitive:
-			mods += " (TD : planète primitive)"
 		var r := Dice.test(nd, diff, mode)
 		if not r["ok"]:
 			continue
-		var marchand: Character = Character.generate("Héros" if est_carrefour else "Normal", "Figurant", "Marchand")
-		var rc := Dice.test(captain.get_comp("Commerce"), 1)
-		var rm := Dice.test(marchand.get_comp("Commerce"), 1)
 		var mod := 1.0
 		var verdict := "égalité"
-		if rc["succ"] > rm["succ"]:
-			mod = 1.0 - 0.05 * float(rc["succ"] - rm["succ"])
-			verdict = "capitaine gagne"
-		elif rm["succ"] > rc["succ"]:
-			mod = 1.0 + 0.05 * float(rm["succ"] - rc["succ"])
-			verdict = "marchand gagne"
-		var base_prix: int = ShopTables.prix_achat(it, cours)
-		var prix_n: int = maxi(1, int(round(float(base_prix) * mod)))
+		var prix_n := base_prix
+		var nego := ""
+		if base_prix <= 10:
+			verdict = "pas de marchandage (prix ≤ 10 €)"
+		else:
+			var marchand: Character = Character.generate("Héros" if est_carrefour else "Normal", "Figurant", "Marchand")
+			var rc := Dice.test(captain.get_comp("Commerce"), 1)
+			var rm := Dice.test(marchand.get_comp("Commerce"), 1)
+			if rc["succ"] > rm["succ"]:
+				mod = 1.0 - 0.05 * float(rc["succ"] - rm["succ"])
+				verdict = "capitaine gagne"
+			elif rm["succ"] > rc["succ"]:
+				mod = 1.0 + 0.05 * float(rm["succ"] - rc["succ"])
+				verdict = "marchand gagne"
+			prix_n = maxi(1, int(round(float(base_prix) * mod)))
+			nego = " · opposition Commerce %s vs marchand %s (%s) → ×%s" % [Dice.fmt_jet(rc), Dice.fmt_jet(rm), verdict, MAUtils.fmt_num(mod)]
 		articles_trouves[nom] = {"prix": prix_n, "base": base_prix, "mod": mod}
 		nouveaux += 1
-		log += "  [color=7bed9f]Trouvé : %s[/color] — Recherche %s (diff %d%s) : OK · opposition Commerce %s vs marchand %s (%s) → ×%s : [b]%s €[/b] (base %s €)\n" % [nom, Dice.fmt_jet(r), diff, mods, Dice.fmt_jet(rc), Dice.fmt_jet(rm), verdict, MAUtils.fmt_num(mod), MAUtils.fmt_int(prix_n), MAUtils.fmt_int(base_prix)]
+		log += "  [color=7bed9f]Trouvé : %s[/color] — Recherche %s (diff %d%s) : OK%s : [b]%s €[/b] (base %s €)\n" % [nom, Dice.fmt_jet(r), diff, mods, nego, MAUtils.fmt_int(prix_n), MAUtils.fmt_int(base_prix)]
 	corps_recherche = ship_body
-	if tests > 0:
-		avancer_jours(tests)
+	avancer_jours(1)
 	refresh_all()
-	shop_panel.set_message("Recherche d'articles à %s (%s) : %d test(s) de Recherche, +%d jour(s) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, tests, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()])
+	shop_panel.set_message("Recherche d'articles à %s (%s) : %d test(s) de Recherche, +1 jour (durée de l'action « Faire ses courses », MdJ p271) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()])
 	if log != "":
 		journal.text += "\n[b][color=gold]Recherche d'articles — %s, %s (année %d)[/color][/b]\n" % [MAUtils.galdate(jours_ecoules), str(sb.get("nom", "?")), MAUtils.annee_galactique(jours_ecoules)] + log
 
