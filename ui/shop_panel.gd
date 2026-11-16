@@ -124,7 +124,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		search_button.tooltip_text = "Le capitaine teste chaque article (Recherche) — l'action consomme 1 jour (MdJ p271)"
 		noir_button.tooltip_text = "Recherche illégale (Illégalités) : articles à prix de base ≥ 50 €, prix divisé par 1,5 — 1 jour"
 	title_label.text = titre
-	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible hors planète/station-relais)"]
+	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible : scannez le corps pour détecter un astroport)"]
 	for grid in grids:
 		for ch in grid.get_children():
 			grid.remove_child(ch)

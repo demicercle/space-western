@@ -2,6 +2,10 @@ class_name SystemMap
 extends GridContainer
 
 signal travel_requested(body: Dictionary)
+signal scan_requested
+
+const SCAN_GATED := ["classe", "diametre", "atmosphere", "environnement", "eau", "gravite", "systeme_orbital", "commerce", "securite", "astroport"]
+const SCAN_TEXT_INFOS := ["sources d'énergie", "satellites artificiels ou trafic aérien", "dégagements d'énergie typiques de combats spatiaux en orbite"]
 
 class MapCanvas extends Control:
 	var sys: StarSystem
@@ -92,6 +96,7 @@ var canvas: MapCanvas
 var sys_details: RichTextLabel
 var body_details: RichTextLabel
 var travel_button: Button
+var scan_button: Button
 var sys_msg: Label
 var journal_label: RichTextLabel
 var sys: StarSystem
@@ -125,11 +130,18 @@ func _ready() -> void:
 	right_top.add_theme_constant_override("separation", 6)
 	right_top.custom_minimum_size = Vector2(340, 200)
 	add_child(right_top)
+	var btns := HBoxContainer.new()
+	btns.add_theme_constant_override("separation", 8)
+	right_top.add_child(btns)
 	travel_button = Button.new()
 	travel_button.text = "Voyager vers ce corps"
 	travel_button.disabled = true
 	travel_button.pressed.connect(_on_travel_pressed)
-	right_top.add_child(travel_button)
+	btns.add_child(travel_button)
+	scan_button = Button.new()
+	scan_button.text = "Scanner ce corps (1 h)"
+	scan_button.pressed.connect(_on_scan_pressed)
+	btns.add_child(scan_button)
 	sys_msg = Label.new()
 	sys_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sys_msg.add_theme_font_size_override("font_size", 11)
@@ -206,6 +218,22 @@ func _on_travel_pressed() -> void:
 	if selected_body != null:
 		travel_requested.emit(selected_body)
 
+func _on_scan_pressed() -> void:
+	scan_requested.emit()
+
+func refresh_scan_button() -> void:
+	if not is_current_system or sys == null or ship_body == null or not sys.corps.has(ship_body):
+		scan_button.disabled = true
+		scan_button.tooltip_text = "Le vaisseau doit être en orbite autour d'un corps de ce système"
+		return
+	var sc: Variant = ship_body.get("scan", null)
+	if sc != null and bool(sc.get("ok", false)):
+		scan_button.disabled = true
+		scan_button.tooltip_text = "Corps déjà scanné (informations conservées)"
+	else:
+		scan_button.disabled = false
+		scan_button.tooltip_text = "Scan (1 h) : test de Senseurs difficulté 2 — détecte l'astroport et sa fréquence radio ; +1 info par succès excédentaire"
+
 func set_system(s: StarSystem) -> void:
 	sys = s
 	canvas.sys = s
@@ -231,13 +259,24 @@ static func _table_bb(rows: Array) -> String:
 	bb += "[/table]\n"
 	return bb
 
+func _scan_infos_of(body: Dictionary) -> Array:
+	var sc: Variant = body.get("scan", null)
+	if sc == null or not bool(sc.get("ok", false)):
+		return []
+	return sc.get("infos", [])
+
 func _body_bb(body: Dictionary) -> String:
+	var infos: Array = _scan_infos_of(body)
+	var scanned: bool = infos.size() > 0
 	var rows: Array = [
 		["Système planétaire", "%s (%s-%d)" % [sys.nom, sys.quad_x, sys.quad_y]],
 		["Orbite", "%s US" % MAUtils.fmt_num(float(body["orbite"]))],
 		["Distance de saut", "%s US" % MAUtils.fmt_num(float(body["distance_saut"]))],
-		["Classe", str(body.get("classe", body["type"]))],
 	]
+	var classe_txt := str(body.get("classe", body["type"]))
+	if SCAN_GATED.has("classe") and not infos.has("classe"):
+		classe_txt = "? (non scanné)"
+	rows.append(["Classe", classe_txt])
 	var keys := [
 		["systeme_orbital", "Système orbital"], ["diametre", "Diamètre"], ["atmosphere", "Atmosphère"],
 		["environnement", "Environnement"], ["temperature", "Température"], ["gravite", "Gravité"],
@@ -248,9 +287,21 @@ func _body_bb(body: Dictionary) -> String:
 	]
 	for kv in keys:
 		if body.has(kv[0]) and str(body[kv[0]]) != "" and str(body[kv[0]]) != "false":
-			rows.append([kv[1], str(body[kv[0]])])
+			var v := str(body[kv[0]])
+			if SCAN_GATED.has(kv[0]) and not infos.has(kv[0]):
+				v = "? (non scanné)"
+			rows.append([kv[1], v])
 	var bb := "\n[b][color=cyan]▸ %s[/color][/b]\n" % str(body.get("nom", "?"))
 	bb += _table_bb(rows)
+	var sc: Variant = body.get("scan", null)
+	if scanned:
+		var astro: bool = bool(sc.get("astroport", false))
+		bb += "[color=7bed9f]Scanné[/color] — astroport : %s\n" % ("détecté (fréquence radio connue)" if astro else "aucun détecté")
+		for t in SCAN_TEXT_INFOS:
+			if infos.has(t):
+				bb += "  ▸ %s\n" % t
+	else:
+		bb += "[color=ff9966]Non scanné[/color] — si le vaisseau est sur ce corps, bouton « Scanner ce corps (1 h) ».\n"
 	if body.get("description", "") != "":
 		bb += "[i]%s[/i]\n" % str(body["description"])
 	if ship_orbite >= 0.0:
@@ -301,9 +352,16 @@ func _render_details() -> void:
 	if sys.ceinture != null:
 		bb2 += "\n▸ %s, orbite %s US\n" % [str(sys.ceinture["nom"]), MAUtils.fmt_num(float(sys.ceinture["orbite"]))]
 	body_details.text = bb2
+	refresh_scan_button()
 
 func set_message(t: String) -> void:
 	sys_msg.text = t
 
 func set_journal(t: String) -> void:
 	journal_label.text = t
+
+func append_journal(t: String) -> void:
+	if journal_label.text == "":
+		journal_label.text = t
+	else:
+		journal_label.text += "\n" + t

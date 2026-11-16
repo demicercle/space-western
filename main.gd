@@ -26,8 +26,11 @@ var ship_orbite_us := 0.0
 var ship_angle := 0.0
 var game_seed := 0
 var jours_ecoules := 0
+var heure_jour := 0
 var articles_trouves := {}
 var corps_recherche: Variant = null
+
+const SCAN_EXTRA := ["classe", "diametre", "atmosphere", "environnement", "eau", "gravite", "systeme_orbital", "commerce", "securite", "sources d'énergie", "satellites artificiels ou trafic aérien", "dégagements d'énergie typiques de combats spatiaux en orbite"]
 
 var galaxy_map: GalaxyMap
 var system_map: SystemMap
@@ -211,6 +214,7 @@ func _build_tabs() -> void:
 	system_map.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(1).add_child(system_map)
 	system_map.travel_requested.connect(_on_voyage_inter)
+	system_map.scan_requested.connect(_on_scanner)
 
 	crew_panel = CrewPanel.new()
 	crew_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -435,6 +439,12 @@ func _itineraire_txt() -> String:
 func avancer_jours(n: int) -> void:
 	jours_ecoules += maxi(0, n)
 
+func avancer_heure(h: int) -> void:
+	heure_jour += maxi(0, h)
+	while heure_jour >= 25:
+		heure_jour -= 25
+		jours_ecoules += 1
+
 func _start_game() -> void:
 	game_seed = randi()
 	ship = Ship.galactic_basic(MAUtils.pick(SHIP_NAMES))
@@ -442,6 +452,7 @@ func _start_game() -> void:
 	characters = []
 	captain = null
 	jours_ecoules = 0
+	heure_jour = 0
 	articles_trouves.clear()
 	corps_recherche = null
 	current_system = get_system(current_pos)
@@ -513,8 +524,8 @@ func _on_buy(it: Dictionary) -> void:
 	if articles_trouves.has(str(it["nom"])):
 		prix = int(articles_trouves[str(it["nom"])]["prix"])
 	var place: float = float(it["place"])
-	if not docked():
-		shop_panel.set_message("Commerce indisponible hors planète/station-relais.")
+	if not peut_commercer():
+		shop_panel.set_message("Commerce indisponible ici : corps non scanné, aucun astroport détecté ou cours ×0.")
 		return
 	if prix < 0:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), str(it["nom"])])
@@ -533,8 +544,8 @@ func _on_buy(it: Dictionary) -> void:
 	refresh_all()
 
 func _on_sell(nom: String) -> void:
-	if not docked():
-		ship_panel.set_message("Vente indisponible hors planète/station-relais.")
+	if not peut_commercer():
+		ship_panel.set_message("Vente indisponible ici : corps non scanné, aucun astroport détecté ou cours ×0.")
 		return
 	if not ship.cargaison.has(nom) or int(ship.cargaison[nom]) <= 0:
 		return
@@ -569,9 +580,84 @@ func _test_marchandage() -> String:
 	marchandage_mod = mod
 	return "Marchandage à l'arrivée — Commerce du capitaine %s : %s contre marchand %s : %s → prix de vente ×%s (plafonds 50 %%–150 %% du prix de base)." % [captain.nom, Dice.fmt_jet(r), Dice.fmt_jet(m), txt, MAUtils.fmt_num(mod)]
 
+func body_scan_ok() -> bool:
+	if ship_body == null:
+		return false
+	var sc: Variant = ship_body.get("scan", null)
+	if sc == null or not bool(sc.get("ok", false)):
+		return false
+	return bool(sc.get("astroport", false))
+
+func peut_commercer() -> bool:
+	if not docked() or not body_scan_ok():
+		return false
+	var c := cours_actuel()
+	return float(c["A"]) > 0.0 or float(c["B"]) > 0.0 or float(c["C"]) > 0.0
+
+func peut_recruter() -> bool:
+	if not docked() or not body_scan_ok():
+		return false
+	return ship_body["type"] == "station" or bool(ship_body.get("habitee", false))
+
+func _scan_roller() -> Character:
+	for c in characters:
+		if c.post_index == 1:
+			return c
+	var best: Character = null
+	var best_v := -1
+	for c in characters:
+		var v: int = c.get_comp("Senseurs")
+		if v > best_v:
+			best_v = v
+			best = c
+	return best
+
+func _on_scanner() -> void:
+	if ship_body == null or current_system == null:
+		return
+	var sb: Dictionary = ship_body
+	var sc0: Variant = sb.get("scan", null)
+	if sc0 != null and bool(sc0.get("ok", false)):
+		system_map.set_message("%s est déjà scanné (informations conservées)." % str(sb.get("nom", "?")))
+		return
+	var roller: Character = _scan_roller()
+	if roller == null:
+		system_map.set_message("Scan impossible : aucun personnage avec Senseurs à bord.")
+		return
+	avancer_heure(1)
+	var m := _sante_mod(roller)
+	var r := Dice.test(roller.get_comp("Senseurs") + int(m[0]), 2, str(m[1]))
+	var bb := "[b][color=gold]Scan de %s[/color][/b] (%s, %d h) — Senseurs de %s : %s (diff 2)\n" % [str(sb.get("nom", "?")), MAUtils.galdate(jours_ecoules), heure_jour, roller.nom, Dice.fmt_jet(r)]
+	var infos: Array = []
+	var astro := false
+	if r["ok"]:
+		astro = sb["type"] == "station"
+		if not astro:
+			var ap: String = str(sb.get("astroport", ""))
+			astro = ap != "" and not ap.begins_with("aucun")
+		infos.append("astroport")
+		var extra: int = mini(int(r["extra"]), SCAN_EXTRA.size())
+		for i in range(extra):
+			infos.append(SCAN_EXTRA[i])
+		sb["scan"] = {"ok": true, "astroport": astro, "infos": infos}
+		bb += "[color=7bed9f]Scan réussi[/color] — astroport %s et sa fréquence radio (commerce/recrutement autorisés si cours > 0).\n" % ("détecté" if astro else "NON détecté sur ce corps")
+		if extra > 0:
+			bb += "+%d succès excédentaire(s) → infos révélées : %s\n" % [extra, ", ".join(infos.slice(1))]
+	else:
+		sb["scan"] = {"ok": false, "astroport": false, "infos": []}
+		bb += "[color=ff5544]Scan échoué[/color] — 1 h écoulée, nouveau scan possible.\n"
+	system_map.append_journal(bb)
+	if r["ok"] and astro:
+		system_map.set_message("Scan OK : astroport détecté sur %s — commerce et recrutement disponibles." % str(sb.get("nom", "?")))
+	elif r["ok"]:
+		system_map.set_message("Scan OK : aucun astroport sur %s — commerce/recrutement indisponibles ici." % str(sb.get("nom", "?")))
+	else:
+		system_map.set_message("Scan échoué sur %s (1 h écoulée) — réessayez." % str(sb.get("nom", "?")))
+	refresh_all()
+
 func _on_rechercher(illegal := false) -> void:
-	if not docked():
-		shop_panel.set_message("Recherche d'articles impossible hors planète/station-relais.")
+	if not peut_commercer():
+		shop_panel.set_message("Recherche impossible : scannez ce corps (bouton « Scanner ») et détectez un astroport, avec au moins un cours > 0.")
 		return
 	if current_system != null and current_system.est_relais:
 		shop_panel.set_message("Comptoir OCG de la station-relais : tarifs fixes, pas besoin de chercher.")
@@ -869,9 +955,13 @@ func _update_buttons() -> void:
 	var dk := docked()
 	plein_button.disabled = not dk or ship.radix_pc >= ship.autonomie_pc
 	calc_button.disabled = destination.x < 0 or not can_travel()
-	recruit_panel.set_enabled_state(dk, credits, characters.size(), ship.passagers_max)
+	recruit_panel.set_enabled_state(peut_recruter(), credits, characters.size(), ship.passagers_max)
 	if not dk:
 		shop_panel.set_message("Commerce impossible, trouvez une station-relais ou une planète commerciale.")
+	elif not body_scan_ok():
+		shop_panel.set_message("Commerce impossible : scannez ce corps (bouton « Scanner » dans la carte de système) pour détecter un astroport.")
+	elif not peut_commercer():
+		shop_panel.set_message("Commerce impossible ici : cours A/B/C tous à ×0 sur ce corps.")
 
 func _post_skills() -> Dictionary:
 	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0, "dpi": 0, "mpi": "", "dna": 0, "mna": "", "dse": 0, "mse": "", "dss": 0, "mss": "", "ding": 0, "ming": "", "dae": 0, "mae": "", "dca": 0, "mca": ""}
@@ -1222,8 +1312,8 @@ func _on_recruit_found(c: Character) -> void:
 	_update_buttons()
 
 func _on_recruit_hired(c: Character) -> void:
-	if not docked():
-		recruit_panel.set_message("Recrutement impossible hors planète/station-relais.")
+	if not peut_recruter():
+		recruit_panel.set_message("Recrutement impossible ici : scannez le corps (astroport détecté requis) — planète habitée ou station.")
 		return
 	if characters.size() >= ship.passagers_max:
 		recruit_panel.set_message("Le vaisseau est plein (%d/%d)." % [characters.size(), ship.passagers_max])
@@ -1242,7 +1332,7 @@ func _on_recruit_hired(c: Character) -> void:
 	refresh_all()
 
 func refresh_all() -> void:
-	calendar_label.text = "Calendrier galactique : %s · année %s" % [MAUtils.galdate(jours_ecoules), MAUtils.fmt_int(MAUtils.annee_galactique(jours_ecoules))]
+	calendar_label.text = "Calendrier galactique : %s · %d h · année %s" % [MAUtils.galdate(jours_ecoules), heure_jour, MAUtils.fmt_int(MAUtils.annee_galactique(jours_ecoules))]
 	jours_label.text = "Jours écoulés depuis le premier jour : %d" % jours_ecoules
 	ship_name_label.text = "Vaisseau : %s (%s)" % [ship.nom, ship.modele]
 	pos_label.text = "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
@@ -1263,6 +1353,7 @@ func refresh_all() -> void:
 	galaxy_map.queue_redraw()
 	travel_info_label.text = "Radix : %s / %s PC · Vitesse : %d PC/j" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), ship.vitesse_hyper_pc_j]
 	var dk := docked()
+	var pc := peut_commercer()
 	if corps_recherche != null and corps_recherche != ship_body:
 		articles_trouves.clear()
 		corps_recherche = null
@@ -1270,10 +1361,11 @@ func refresh_all() -> void:
 	var items: Array
 	var titre: String
 	var prix_over := {}
-	if est_rel:
+	var sys_nom: String = current_system.nom if current_system != null else "?"
+	if est_rel and pc:
 		items = ShopTables.STATION_RELAIS
-		titre = "Commerce — station-relais %s (tarifs du comptoir OCG, GdM p125)" % current_system.nom
-	else:
+		titre = "Commerce — station-relais %s (tarifs du comptoir OCG, GdM p125)" % sys_nom
+	elif pc:
 		items = []
 		for nom in articles_trouves.keys():
 			var it: Variant = ShopTables.find_catalogue(nom)
@@ -1282,9 +1374,11 @@ func refresh_all() -> void:
 			if it != null:
 				items.append(it)
 				prix_over[nom] = articles_trouves[nom]
-		var sys_nom: String = current_system.nom if current_system != null else "?"
 		titre = "Commerce — planète %s (catalogue MdJ p234-243 + marchandises p233 ; %d article(s) trouvé(s))" % [sys_nom, articles_trouves.size()]
+	else:
+		items = []
+		titre = "Commerce — %s (scannez le corps pour détecter un astroport)" % sys_nom
 	_update_info_label()
 	_update_buttons()
-	shop_panel.set_catalog(items, titre, credits, soute_used(), ship.soute, dk, cours_txt(), cours_actuel(), prix_over, est_rel)
-	ship_panel.set_context(cours_actuel(), marchandage_mod, dk, radix_unit_price())
+	shop_panel.set_catalog(items, titre, credits, soute_used(), ship.soute, pc, cours_txt(), cours_actuel(), prix_over, est_rel)
+	ship_panel.set_context(cours_actuel(), marchandage_mod, pc, radix_unit_price())
