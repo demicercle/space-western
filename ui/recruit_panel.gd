@@ -60,7 +60,7 @@ func _ready() -> void:
 	var psep := HSeparator.new()
 	vb.add_child(psep)
 	var pl := Label.new()
-	pl.text = "Professions disponibles (canvas) :"
+	pl.text = "Professions disponibles (export texte : assets/professions.txt) :"
 	pl.add_theme_font_size_override("font_size", 12)
 	pl.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	vb.add_child(pl)

@@ -111,10 +111,21 @@ func get_comp(base: String) -> int:
 	return best
 
 func domaine_de(comp_name: String) -> String:
+	var base := comp_name
+	var i := comp_name.find(" (")
+	if i > 0:
+		base = comp_name.substr(0, i)
 	for d in NPCTables.COMPETENCES.keys():
-		if NPCTables.COMPETENCES[d].has(comp_name):
-			return d
+		for cn in NPCTables.COMPETENCES[d]:
+			if cn == comp_name or cn == base or cn.trim_suffix(" (au choix)") == base:
+				return d
 	return ""
+
+func dice_test(comp_name: String) -> int:
+	var d := domaine_de(comp_name)
+	if d == "":
+		return get_comp(comp_name)
+	return get_comp(comp_name) + int(caracs.get(NPCTables.DOMAINES_CARAC.get(d, ""), 0))
 
 func sante_index() -> int:
 	if pv <= 0:

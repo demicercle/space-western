@@ -404,7 +404,7 @@ func _appliquer_sante_voyage(res: Dictionary) -> void:
 		for j in range(jours):
 			if c.pv >= c.pv_max:
 				break
-			var r := Dice.test(c.get_comp("Athlétisme"), diff)
+			var r := Dice.test(c.dice_test("Athlétisme"), diff)
 			if r["ok"]:
 				c.pv = mini(c.pv_max, c.pv + 1 + int(r["extra"]))
 		if c.pv != av:
@@ -483,6 +483,8 @@ func _start_game() -> void:
 	if ship_body != null:
 		ship_orbite_us = float(ship_body["orbite"])
 		ship_angle = current_system.angle_corps(ship_body)
+	if ship_body != null and current_pos == GalaxyData.EXXALIA:
+		ship_body["scan"] = {"ok": true, "astroport": true, "infos": ["astroport"]}
 	refresh_all()
 
 func get_system(cell: Vector2i) -> StarSystem:
@@ -598,7 +600,7 @@ func _scan_roller() -> Character:
 	var best: Character = null
 	var best_v := -1
 	for c in characters:
-		var v: int = c.get_comp("Senseurs")
+		var v: int = c.dice_test("Senseurs")
 		if v > best_v:
 			best_v = v
 			best = c
@@ -616,8 +618,8 @@ func _on_scanner() -> void:
 		return
 	avancer_heure(1)
 	var m := _sante_mod(roller)
-	var r := Dice.test(roller.get_comp("Senseurs") + int(m[0]), 2, str(m[1]))
-	var bb := "[b][color=gold]Scan de %s[/color][/b] (%s, %d h) — Senseurs de %s : %s (diff 2)\n" % [str(sb.get("nom", "?")), MAUtils.galdate(jours_ecoules), heure_jour, roller.nom, Dice.fmt_jet(r)]
+	var r := Dice.test(roller.dice_test("Senseurs") + int(m[0]), 2, str(m[1]))
+	var bb := "[b][color=gold]Scan de %s[/color][/b] (%s, %d h) — Senseurs de %s : %s (diff 2) — total : %d succès\n" % [str(sb.get("nom", "?")), MAUtils.galdate(jours_ecoules), heure_jour, roller.nom, Dice.fmt_jet(r), int(r["succ"])]
 	var infos: Array = []
 	if had_ok:
 		infos = sc0["infos"].duplicate()
@@ -645,6 +647,7 @@ func _on_scanner() -> void:
 			bb += "+%d succès excédentaire(s) → nouvelles infos : %s\n" % [extra, ", ".join(nouvelles)]
 		else:
 			bb += "(aucune info supplémentaire : tout est déjà révélé)\n"
+		bb += "Infos révélées au total (%d) : %s\n" % [infos.size(), ", ".join(infos)]
 	else:
 		if not had_ok:
 			sb["scan"] = {"ok": false, "astroport": false, "infos": []}
@@ -699,7 +702,7 @@ func _on_rechercher() -> void:
 			continue
 		tests += 1
 		var diff: int = int(round(c * 2.0))
-		var nd: int = captain.get_comp(comp_key)
+		var nd: int = captain.dice_test(comp_key)
 		var mods := ""
 		var mode := "normal"
 		if est_primitive:
@@ -956,31 +959,31 @@ func _post_skills() -> Dictionary:
 		var m := _sante_mod(c)
 		match post_name_static(c.post_index):
 			"Pilote":
-				sk["pi"] = c.get_comp("Pilotage")
-				sk["na"] = c.get_comp("Navigation")
+				sk["pi"] = c.dice_test("Pilotage")
+				sk["na"] = c.dice_test("Navigation")
 				sk["dpi"] = m[0]
 				sk["mpi"] = m[1]
 				sk["dna"] = m[0]
 				sk["mna"] = m[1]
 			"Vigie":
-				sk["se"] = c.get_comp("Senseurs")
-				sk["ss"] = c.get_comp("Sciences stellaires")
+				sk["se"] = c.dice_test("Senseurs")
+				sk["ss"] = c.dice_test("Sciences stellaires")
 				sk["dse"] = m[0]
 				sk["mse"] = m[1]
 				sk["dss"] = m[0]
 				sk["mss"] = m[1]
 			"Ingénieur":
-				sk["ing"] = c.get_comp("Ingénierie")
+				sk["ing"] = c.dice_test("Ingénierie")
 				sk["ding"] = m[0]
 				sk["ming"] = m[1]
 			"Canonnier":
-				sk["cae"] = c.get_comp("Armes embarquées")
+				sk["cae"] = c.dice_test("Armes embarquées")
 				sk["dae"] = m[0]
 				sk["mae"] = m[1]
 			"Cartographe / Historien":
-				sk["carto"] = c.get_comp("Cartographie")
+				sk["carto"] = c.dice_test("Cartographie")
 				if sk["carto"] == 0:
-					sk["carto"] = maxi(c.get_comp("Navigation"), c.get_comp("Histoire"))
+					sk["carto"] = maxi(c.dice_test("Navigation"), c.dice_test("Histoire"))
 				sk["dca"] = m[0]
 				sk["mca"] = m[1]
 	return sk

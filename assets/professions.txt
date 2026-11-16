@@ -1,0 +1,87 @@
+Professions disponibles — Metal Adventures (NPCTables.PROFESSIONS)
+Chaque profession : domaines privilégiés (caractéristique associée entre parenthèses) · compétences
+
+Soldat du rang
+  domaines : Techniques (Agilité), Survie (Carrure), Trempe (Sang-froid)
+  compétences : Armes d'épaule, Mêlée, Athlétisme, Tactiques, Armes de poing, Intimidation
+
+Soldat d'élite / vétéran
+  domaines : Techniques (Agilité), Survie (Carrure), Trempe (Sang-froid)
+  compétences : Armes d'épaule, Armes lourdes, Mêlée, Tactiques, Athlétisme, Détermination, Armes de poing
+
+Officier militaire
+  domaines : Trempe (Sang-froid), Techniques (Agilité), Sciences (Intelligence)
+  compétences : Commandement, Tactiques, Stratégie, Armes d'épaule, Étiquette
+
+Pilote
+  domaines : Techniques (Agilité), Espionnage (Perception), Sciences (Intelligence)
+  compétences : Pilotage (Vaisseau spatial), Senseurs, Navigation, Armes embarquées, Analyse
+
+Canonnier
+  domaines : Techniques (Agilité), Survie (Carrure), Espionnage (Perception)
+  compétences : Armes embarquées, Armes lourdes, Senseurs, Mêlée
+
+Marchand
+  domaines : Négociation (Présence), Sciences (Intelligence), Espionnage (Perception)
+  compétences : Commerce, Baratin, Étiquette, Analyse, Bureaucratie
+
+Contrebandier
+  domaines : Espionnage (Perception), Négociation (Présence), Techniques (Agilité)
+  compétences : Discrétion, Commerce, Systèmes de sécurité, Baratin, Falsification, Pilotage (au choix)
+
+Fonctionnaire
+  domaines : Négociation (Présence), Sciences (Intelligence), Espionnage (Perception)
+  compétences : Bureaucratie, Étiquette, Histoire, Analyse, Baratin
+
+Noble solaire
+  domaines : Négociation (Présence), Sciences (Intelligence), Trempe (Sang-froid)
+  compétences : Étiquette, Danse, Histoire, Commandement, Baratin, Connaissance (au choix)
+
+Médecin
+  domaines : Sciences (Intelligence), Trempe (Sang-froid), Techniques (Agilité)
+  compétences : Médecine, Premiers soins, Sciences stellaires, Analyse, Détermination
+
+Scientifique
+  domaines : Sciences (Intelligence), Techniques (Agilité), Espionnage (Perception)
+  compétences : Sciences stellaires, Analyse, Ingénierie, Connaissance (au choix), Navigation, Histoire
+
+Ingénieur / machiniste
+  domaines : Sciences (Intelligence), Techniques (Agilité), Trempe (Sang-froid)
+  compétences : Ingénierie, Artisanat (au choix), Analyse, Armes embarquées, Premiers soins
+
+Force de l'ordre
+  domaines : Espionnage (Perception), Techniques (Agilité), Trempe (Sang-froid)
+  compétences : Recherche, Armes de poing, Intimidation, Systèmes de sécurité, Discrétion, Tactiques
+
+Mercenaire
+  domaines : Techniques (Agilité), Survie (Carrure), Trempe (Sang-froid)
+  compétences : Armes d'épaule, Armes de poing, Mêlée, Athlétisme, Illégalités, Intimidation
+
+Barman / tenancier
+  domaines : Négociation (Présence), Espionnage (Perception), Trempe (Sang-froid)
+  compétences : Baratin, Jeux, Illégalités, Recherche, Séduction
+
+Mineur / ouvrier
+  domaines : Survie (Carrure), Techniques (Agilité), Trempe (Sang-froid)
+  compétences : Athlétisme, Ingénierie, Artisanat (au choix), Mêlée, Détermination
+
+Agriculteur
+  domaines : Survie (Carrure), Sciences (Intelligence), Négociation (Présence)
+  compétences : Connaissance (au choix), Commerce, Athlétisme, Premiers soins
+
+Journaliste
+  domaines : Espionnage (Perception), Négociation (Présence), Sciences (Intelligence)
+  compétences : Recherche, Analyse, Baratin, Bureaucratie, Discrétion
+
+Artiste
+  domaines : Sciences (Intelligence), Négociation (Présence), Trempe (Sang-froid)
+  compétences : Arts (au choix), Comédie, Danse, Séduction, Baratin
+
+Religieux / gourou
+  domaines : Sciences (Intelligence), Trempe (Sang-froid), Négociation (Présence)
+  compétences : Connaissance (au choix), Commandement, Détermination, Comédie, Étiquette
+
+Pirate de l'espace
+  domaines : Trempe (Sang-froid), Survie (Carrure), Techniques (Agilité)
+  compétences : Armes d'épaule, Mêlée, Navigation, Illégalités, Baratin, Pilotage (au choix), Détermination
+
