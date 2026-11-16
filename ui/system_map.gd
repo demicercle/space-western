@@ -222,9 +222,11 @@ func _on_scan_pressed() -> void:
 	scan_requested.emit()
 
 func refresh_scan_button() -> void:
-	if not is_current_system or sys == null or ship_body == null or not sys.corps.has(ship_body):
+	var show: bool = is_current_system and sys != null and ship_body != null and sys.corps.has(ship_body) and selected_body != null and selected_body == ship_body
+	scan_button.visible = show
+	if not show:
 		scan_button.disabled = true
-		scan_button.tooltip_text = "Le vaisseau doit être en orbite autour d'un corps de ce système"
+		scan_button.tooltip_text = "Sélectionnez dans la carte le corps où se trouve le vaisseau pour pouvoir le scanner"
 		return
 	scan_button.disabled = false
 	scan_button.tooltip_text = "Scanner (1 h, rescan possible) : test de Senseurs difficulté 2 — détecte l'astroport et sa fréquence radio ; +1 info par succès excédentaire"

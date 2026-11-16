@@ -40,6 +40,13 @@ const COMPETENCES := {
 	"Trempe": ["Commandement", "Démolition", "Détermination", "Illégalités", "Intimidation", "Premiers soins", "Tactiques"],
 }
 
+const PROFESSIONS_MILITAIRES := ["Soldat du rang", "Soldat d'élite / vétéran", "Officier militaire", "Force de l'ordre", "Mercenaire"]
+
+static func type_profession(p: String) -> String:
+	if PROFESSIONS_MILITAIRES.has(p):
+		return "militaire"
+	return "civil"
+
 const PROFESSIONS := {
 	"Soldat du rang": {"dom": ["Techniques", "Survie", "Trempe"], "comp": ["Armes d'épaule", "Mêlée", "Athlétisme", "Tactiques", "Armes de poing", "Intimidation"]},
 	"Soldat d'élite / vétéran": {"dom": ["Techniques", "Survie", "Trempe"], "comp": ["Armes d'épaule", "Armes lourdes", "Mêlée", "Tactiques", "Athlétisme", "Détermination", "Armes de poing"]},

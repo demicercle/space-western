@@ -42,7 +42,7 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	nl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3) if is_captain else Color(1.0, 0.9, 0.5))
 	vb2.add_child(nl)
 	var pl := Label.new()
-	pl.text = "%s · %s · %s" % [c.profession, c.puissance, c.role]
+	pl.text = "%s (%s) · %s · %s" % [c.profession, NPCTables.type_profession(c.profession), c.puissance, c.role]
 	pl.add_theme_font_size_override("font_size", 11)
 	pl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	vb2.add_child(pl)

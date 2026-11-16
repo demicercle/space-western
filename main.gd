@@ -157,7 +157,12 @@ func _build_left_panel() -> void:
 	posts_container.add_theme_constant_override("separation", 6)
 	left_vbox.add_child(posts_container)
 
+func _on_tab_changed(t: int) -> void:
+	if t == 1 and system_map.is_current_system and ship_body != null:
+		system_map.select_body(ship_body)
+
 func _build_tabs() -> void:
+	tabs.tab_changed.connect(_on_tab_changed)
 	tabs.set_tab_title(0, "Carte galactique")
 	tabs.set_tab_title(1, "Carte de système")
 	tabs.set_tab_title(2, "Équipage")
@@ -486,6 +491,8 @@ func _start_game() -> void:
 	if ship_body != null and current_pos == GalaxyData.EXXALIA:
 		ship_body["scan"] = {"ok": true, "astroport": true, "infos": ["astroport"]}
 	refresh_all()
+	if ship_body != null:
+		system_map.select_body(ship_body)
 
 func get_system(cell: Vector2i) -> StarSystem:
 	var key := "%d,%d" % [cell.x, cell.y]
@@ -1208,6 +1215,8 @@ func _on_voyage_inter(body: Dictionary) -> void:
 		ship_body = body
 		ship_orbite_us = arr_o
 		ship_angle = current_system.angle_corps(body)
+		if tabs.current_tab == 1:
+			system_map.select_body(body)
 		system_map.set_message("Arrivé à %s (orbite %d US)." % [str(body.get("nom", "?")), int(arr_o)])
 	elif res["a_sec"]:
 		var parc := dist - float(res["restant"])

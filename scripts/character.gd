@@ -32,7 +32,7 @@ static func generate(puissance := "Héros", role := "Premier rôle", profession 
 	c.role = role
 	if profession == "" or not NPCTables.PROFESSIONS.has(profession):
 		profession = MAUtils.pick(NPCTables.PROFESSIONS.keys())
-	c.prix_journalier = PRIX_JOURNALIER.get(puissance, 10)
+	c.prix_journalier = int(round(float(PRIX_JOURNALIER.get(puissance, 10)) * (1.5 if NPCTables.type_profession(profession) == "militaire" else 1.0)))
 	c.prix_recrutement = 5 * c.prix_journalier
 	var p: Dictionary = NPCTables.PROFESSIONS[profession]
 	c.profession = profession
