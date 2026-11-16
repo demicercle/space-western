@@ -65,6 +65,8 @@ var calc_button: Button
 var journal: RichTextLabel
 var context_menu: PopupMenu
 var confirm_dialog: AcceptDialog
+var voyage_dialog: AcceptDialog
+var pending_voyage: Callable
 var pending_virer: Character = null
 var panel_style: StyleBoxFlat
 var ship_health_label: Label
@@ -84,6 +86,7 @@ func _ready() -> void:
 	_setup_theme()
 	_build_left_panel()
 	_build_tabs()
+	_build_main_layout()
 	_build_context_menu()
 	_build_pause_menu()
 	pause_button.pressed.connect(_toggle_pause_menu)
@@ -221,15 +224,6 @@ func _build_tabs() -> void:
 	msg_label.add_theme_font_size_override("font_size", 11)
 	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	side.add_child(msg_label)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = SIZE_EXPAND_FILL
-	side.add_child(scroll)
-	journal = RichTextLabel.new()
-	journal.bbcode_enabled = true
-	journal.size_flags_horizontal = SIZE_EXPAND_FILL
-	journal.size_flags_vertical = SIZE_EXPAND_FILL
-	journal.scroll_active = true
-	scroll.add_child(journal)
 
 	system_map = SystemMap.new()
 	system_map.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -259,6 +253,38 @@ func _build_tabs() -> void:
 	recruit_panel.recruit_found.connect(_on_recruit_found)
 	recruit_panel.recruit_hired.connect(_on_recruit_hired)
 
+func _build_main_layout() -> void:
+	var topbar := tabs.get_parent()
+	var rv := topbar.get_parent()
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	hb.size_flags_horizontal = SIZE_EXPAND_FILL
+	hb.size_flags_vertical = SIZE_EXPAND_FILL
+	rv.add_child(hb)
+	topbar.remove_child(tabs)
+	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
+	tabs.size_flags_vertical = SIZE_EXPAND_FILL
+	hb.add_child(tabs)
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(370, 0)
+	side.add_theme_constant_override("separation", 4)
+	hb.add_child(side)
+	var jh := Label.new()
+	jh.text = "Journal de bord :"
+	jh.add_theme_font_size_override("font_size", 13)
+	jh.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
+	side.add_child(jh)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = SIZE_EXPAND_FILL
+	side.add_child(scroll)
+	journal = RichTextLabel.new()
+	journal.bbcode_enabled = true
+	journal.size_flags_horizontal = SIZE_EXPAND_FILL
+	journal.size_flags_vertical = SIZE_EXPAND_FILL
+	journal.scroll_active = true
+	scroll.add_child(journal)
+
 func _build_context_menu() -> void:
 	context_menu = PopupMenu.new()
 	add_child(context_menu)
@@ -269,6 +295,27 @@ func _build_context_menu() -> void:
 	if "cancel_button_text" in confirm_dialog:
 		confirm_dialog.cancel_button_text = "Non"
 	confirm_dialog.confirmed.connect(_on_virer_confirmed)
+	voyage_dialog = AcceptDialog.new()
+	add_child(voyage_dialog)
+	voyage_dialog.get_ok_button().text = "Oui"
+	voyage_dialog.add_cancel_button("Non")
+	voyage_dialog.confirmed.connect(_on_voyage_dialog_confirmed)
+
+func _ask_voyage_confirm(text: String, action: Callable) -> void:
+	pending_voyage = action
+	voyage_dialog.dialog_text = text
+	voyage_dialog.popup_centered()
+
+func _info_popup(text: String) -> void:
+	pending_voyage = Callable()
+	voyage_dialog.dialog_text = text
+	voyage_dialog.popup_centered()
+
+func _on_voyage_dialog_confirmed() -> void:
+	var a := pending_voyage
+	pending_voyage = Callable()
+	if a.is_valid():
+		a.call()
 
 func _build_pause_menu() -> void:
 	pause_menu = PopupMenu.new()
@@ -1064,6 +1111,25 @@ func _resume_inter(res: Dictionary, nom_dep: String, di: Dictionary) -> String:
 func _on_calc_voyage() -> void:
 	if destination.x < 0 or not can_travel():
 		return
+	_check_voyage_gal()
+
+func _check_voyage_gal() -> void:
+	if ship.radix_pc <= 0:
+		_info_popup("Voyage impossible : pas de Radix en réserve (0 / %s PC)." % MAUtils.fmt_int(ship.autonomie_pc))
+		return
+	var besoin_r: int = rations_necessaires()
+	if rations_dispo() < besoin_r:
+		_ask_voyage_confirm("Rations insuffisantes (%d en soute pour %d nécessaires) — êtes-vous sûr de vouloir faire cela ?" % [rations_dispo(), besoin_r], _check_radix_gal)
+		return
+	_check_radix_gal()
+
+func _check_radix_gal() -> void:
+	if ship.radix_pc < distance:
+		_ask_voyage_confirm("Réserve de Radix insuffisante (%s PC en réserve pour %s PC de trajet) — êtes-vous sûr de vouloir faire cela ?" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(distance)], _do_calc_voyage)
+		return
+	_do_calc_voyage()
+
+func _do_calc_voyage() -> void:
 	calc_button.disabled = true
 	var sk := _post_skills()
 	var dest_sys := get_system(destination)
@@ -1194,6 +1260,22 @@ func _on_voyage_inter(body: Dictionary) -> void:
 	if dist < 0.0001:
 		system_map.set_message("Le vaisseau est déjà à la hauteur de %s." % str(body.get("nom", "?")))
 		return
+	_check_voyage_inter(body, dist)
+
+func _check_voyage_inter(body: Dictionary, dist: float) -> void:
+	if ship.radix_pc <= 0:
+		_info_popup("Voyage impossible : pas de Radix en réserve (0 PC).")
+		return
+	var jours_est := dist / float(maxi(1, ship.vitesse_croisiere_us_j))
+	var besoin_r := int(ceil(jours_est)) * characters.size()
+	if rations_dispo() < besoin_r:
+		_ask_voyage_confirm("Rations insuffisantes (%d en soute pour %d nécessaires) — êtes-vous sûr de vouloir faire cela ?" % [rations_dispo(), besoin_r], func() -> void: _do_voyage_inter(body, dist))
+		return
+	_do_voyage_inter(body, dist)
+
+func _do_voyage_inter(body: Dictionary, dist: float) -> void:
+	var dep_o := ship_orbite_us
+	var arr_o := float(body["orbite"])
 	var sk := _post_skills()
 	var route_key := "g" if current_system.route == "Route galactique" else ("c" if current_system.route == "Route commerciale" else "x")
 	var cfg := {
