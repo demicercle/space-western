@@ -2,6 +2,7 @@ class_name ShopPanel
 extends VBoxContainer
 
 signal buy_requested(item: Dictionary)
+signal search_requested
 
 const TAB_TITLES := ["Marchandises", "Technologie courante", "Technologie militaire", "Technologie médicale", "La belle vie"]
 
@@ -15,6 +16,8 @@ var credits := 0
 var soute_used := 0.0
 var soute_max := 25.0
 var docked := false
+var est_relais := false
+var search_button: Button
 var cours: Dictionary = {"A": 1.0, "B": 1.0, "C": 1.0}
 
 static var _re_us := RegEx.create_from_string("\\bUS\\b")
@@ -56,11 +59,19 @@ func _ready() -> void:
 	info_label.add_theme_font_size_override("font_size", 12)
 	info_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	add_child(info_label)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 10)
+	add_child(hb)
+	search_button = Button.new()
+	search_button.text = "Rechercher des articles"
+	search_button.pressed.connect(_on_search)
+	hb.add_child(search_button)
 	msg_label = Label.new()
 	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	msg_label.add_theme_font_size_override("font_size", 12)
 	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
-	add_child(msg_label)
+	msg_label.size_flags_horizontal = SIZE_EXPAND_FILL
+	hb.add_child(msg_label)
 	tabs = TabContainer.new()
 	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
 	tabs.size_flags_vertical = SIZE_EXPAND_FILL
@@ -87,13 +98,22 @@ func _header_cell(txt: String) -> Label:
 	l.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	return l
 
-func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: float, p_soute_max: float, p_docked: bool, cours_txt: String, p_cours: Dictionary) -> void:
+func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: float, p_soute_max: float, p_docked: bool, cours_txt: String, p_cours: Dictionary, p_prix := {}, p_est_relais := false) -> void:
 	items = p_items
 	credits = p_credits
 	soute_used = p_soute_used
 	soute_max = p_soute_max
 	docked = p_docked
 	cours = p_cours
+	est_relais = p_est_relais
+	var prix_over: Dictionary = p_prix
+	search_button.disabled = not p_docked or est_relais
+	if est_relais:
+		search_button.tooltip_text = "Comptoir OCG : tarifs fixes, pas de recherche nécessaire"
+	elif not p_docked:
+		search_button.tooltip_text = "Recherche impossible hors planète/station-relais"
+	else:
+		search_button.tooltip_text = "Le capitaine teste chaque article (Recherche) : 1 jour par test"
 	title_label.text = titre
 	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible hors planète/station-relais)"]
 	for grid in grids:
@@ -121,9 +141,18 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 8)
 		cell.custom_minimum_size = Vector2(190, 0)
+		var nom: String = str(it["nom"])
 		var prix := ShopTables.prix_achat(it, cours)
+		var override: bool = prix_over.has(nom)
+		if override:
+			prix = int(prix_over[nom]["prix"])
 		var prix_l := Label.new()
-		prix_l.text = ("—" if prix < 0 else "%s €" % MAUtils.fmt_int(prix))
+		if prix < 0:
+			prix_l.text = "—"
+		elif override:
+			prix_l.text = "%s € (base : %s €)" % [MAUtils.fmt_int(prix), MAUtils.fmt_int(int(prix_over[nom]["base"]))]
+		else:
+			prix_l.text = "%s €" % MAUtils.fmt_int(prix)
 		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
 		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		prix_l.add_theme_font_size_override("font_size", 12)
@@ -142,6 +171,11 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		btn.pressed.connect(_on_buy.bind(it))
 		cell.add_child(btn)
 		grid.add_child(cell)
+	if p_docked and not est_relais and items.size() == 0:
+		set_message("Aucun article trouvé pour l'instant — cliquez sur « Rechercher des articles ».")
+
+func _on_search() -> void:
+	search_requested.emit()
 
 func _on_buy(it: Dictionary) -> void:
 	buy_requested.emit(it)

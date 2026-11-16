@@ -25,6 +25,9 @@ var ship_body: Variant = null
 var ship_orbite_us := 0.0
 var ship_angle := 0.0
 var game_seed := 0
+var jours_ecoules := 0
+var articles_trouves := {}
+var corps_recherche: Variant = null
 
 var galaxy_map: GalaxyMap
 var system_map: SystemMap
@@ -34,6 +37,8 @@ var shop_panel: ShopPanel
 var recruit_panel: RecruitPanel
 var marchandage_mod := 1.0
 var posts_container: VBoxContainer
+var calendar_label: Label
+var jours_label: Label
 var ship_name_label: Label
 var pos_label: Label
 var credits_label: Label
@@ -87,6 +92,14 @@ func apply_panel_style(p: PanelContainer) -> void:
 		p.add_theme_stylebox_override("panel", panel_style)
 
 func _build_left_panel() -> void:
+	calendar_label = Label.new()
+	calendar_label.add_theme_font_size_override("font_size", 13)
+	calendar_label.add_theme_color_override("font_color", Color(0.75, 0.9, 1.0))
+	left_vbox.add_child(calendar_label)
+	jours_label = Label.new()
+	jours_label.add_theme_font_size_override("font_size", 12)
+	jours_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	left_vbox.add_child(jours_label)
 	ship_name_label = Label.new()
 	ship_name_label.add_theme_font_size_override("font_size", 16)
 	ship_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
@@ -212,6 +225,7 @@ func _build_tabs() -> void:
 	shop_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(4).add_child(shop_panel)
 	shop_panel.buy_requested.connect(_on_buy)
+	shop_panel.search_requested.connect(_on_rechercher)
 
 	recruit_panel = RecruitPanel.new()
 	recruit_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -418,12 +432,18 @@ func _itineraire_txt() -> String:
 	var en_soute := ship.rations + int(ship.cargaison.get("Repas", 0))
 	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (en soute : %d)" % [MAUtils.fmt_int(distance), duree, rations, en_soute]
 
+func avancer_jours(n: int) -> void:
+	jours_ecoules += maxi(0, n)
+
 func _start_game() -> void:
 	game_seed = randi()
 	ship = Ship.galactic_basic(MAUtils.pick(SHIP_NAMES))
 	credits = 8000
 	characters = []
 	captain = null
+	jours_ecoules = 0
+	articles_trouves.clear()
+	corps_recherche = null
 	current_system = get_system(current_pos)
 	ship_body = null
 	ship_orbite_us = float(current_system.limite)
@@ -490,6 +510,8 @@ func radix_unit_price() -> float:
 
 func _on_buy(it: Dictionary) -> void:
 	var prix := ShopTables.prix_achat(it, cours_actuel())
+	if articles_trouves.has(str(it["nom"])):
+		prix = int(articles_trouves[str(it["nom"])]["prix"])
 	var place: float = float(it["place"])
 	if not docked():
 		shop_panel.set_message("Commerce indisponible hors planète/station-relais.")
@@ -546,6 +568,84 @@ func _test_marchandage() -> String:
 	mod = clampf(mod, 0.5, 1.5)
 	marchandage_mod = mod
 	return "Marchandage à l'arrivée — Commerce du capitaine %s : %s contre marchand %s : %s → prix de vente ×%s (plafonds 50 %%–150 %% du prix de base)." % [captain.nom, Dice.fmt_jet(r), Dice.fmt_jet(m), txt, MAUtils.fmt_num(mod)]
+
+func _on_rechercher() -> void:
+	if not docked():
+		shop_panel.set_message("Recherche d'articles impossible hors planète/station-relais.")
+		return
+	if current_system != null and current_system.est_relais:
+		shop_panel.set_message("Comptoir OCG de la station-relais : tarifs fixes, pas besoin de chercher.")
+		return
+	if captain == null:
+		shop_panel.set_message("Pas de capitaine désigné pour mener la recherche.")
+		return
+	var sb: Dictionary = ship_body
+	var cours := cours_actuel()
+	var com: String = str(sb.get("commerce", "")).to_lower()
+	var est_carrefour := com.contains("carrefour")
+	var est_pauvre := com.contains("pauvre")
+	var est_primitive := com.contains("primitive")
+	var mode := "TD" if est_primitive else "normal"
+	var liste: Array = ShopTables.CATALOGUE + ShopTables.MARCHANDISES
+	var tests := 0
+	var nouveaux := 0
+	var log := ""
+	for it in liste:
+		var nom: String = str(it["nom"])
+		var dispo: String = str(it.get("dispo", "C"))
+		var c: float = float(cours.get(dispo, 1.0))
+		if c <= 0.0:
+			continue
+		if articles_trouves.has(nom):
+			continue
+		tests += 1
+		var diff: int = int(round(c * 2.0))
+		var nd: int = captain.get_comp("Recherche")
+		var mods := ""
+		if est_carrefour:
+			nd += 1
+			mods += " +1d (carrefour)"
+		if dispo == "C":
+			nd += 1
+			mods += " +1d (dispo C)"
+		if dispo == "A":
+			diff += 1
+			mods += " D+1 (dispo A)"
+		var cat: String = str(it.get("cat", ""))
+		if cat == "Technologie militaire" or cat == "Technologie spatiale":
+			diff += 1
+			mods += " D+1 (%s)" % cat.to_lower()
+		if est_pauvre:
+			diff += 1
+			mods += " D+1 (planète pauvre)"
+		if est_primitive:
+			mods += " (TD : planète primitive)"
+		var r := Dice.test(nd, diff, mode)
+		if not r["ok"]:
+			continue
+		var marchand: Character = Character.generate("Héros" if est_carrefour else "Normal", "Figurant", "Marchand")
+		var rc := Dice.test(captain.get_comp("Commerce"), 1)
+		var rm := Dice.test(marchand.get_comp("Commerce"), 1)
+		var mod := 1.0
+		var verdict := "égalité"
+		if rc["succ"] > rm["succ"]:
+			mod = 1.0 - 0.05 * float(rc["succ"] - rm["succ"])
+			verdict = "capitaine gagne"
+		elif rm["succ"] > rc["succ"]:
+			mod = 1.0 + 0.05 * float(rm["succ"] - rc["succ"])
+			verdict = "marchand gagne"
+		var base_prix: int = ShopTables.prix_achat(it, cours)
+		var prix_n: int = maxi(1, int(round(float(base_prix) * mod)))
+		articles_trouves[nom] = {"prix": prix_n, "base": base_prix, "mod": mod}
+		nouveaux += 1
+		log += "  [color=7bed9f]Trouvé : %s[/color] — Recherche %s (diff %d%s) : OK · opposition Commerce %s vs marchand %s (%s) → ×%s : [b]%s €[/b] (base %s €)\n" % [nom, Dice.fmt_jet(r), diff, mods, Dice.fmt_jet(rc), Dice.fmt_jet(rm), verdict, MAUtils.fmt_num(mod), MAUtils.fmt_int(prix_n), MAUtils.fmt_int(base_prix)]
+	corps_recherche = ship_body
+	if tests > 0:
+		avancer_jours(tests)
+	refresh_all()
+	shop_panel.set_message("Recherche d'articles à %s (%s) : %d test(s) de Recherche, +%d jour(s) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, tests, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()])
+	if log != "":
+		journal.text += "\n[b][color=gold]Recherche d'articles — %s, %s (année %d)[/color][/b]\n" % [MAUtils.galdate(jours_ecoules), str(sb.get("nom", "?")), MAUtils.annee_galactique(jours_ecoules)] + log
 
 func nb_posts() -> int:
 	return mini(POSTS.size(), ship.equipage_postes)
@@ -745,8 +845,6 @@ func _update_buttons() -> void:
 	recruit_panel.set_enabled_state(dk, credits, characters.size(), ship.passagers_max)
 	if not dk:
 		shop_panel.set_message("Commerce impossible, trouvez une station-relais ou une planète commerciale.")
-	else:
-		shop_panel.set_message("")
 
 func _post_skills() -> Dictionary:
 	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0, "dpi": 0, "mpi": "", "dna": 0, "mna": "", "dse": 0, "mse": "", "dss": 0, "mss": "", "ding": 0, "ming": "", "dae": 0, "mae": "", "dca": 0, "mca": ""}
@@ -902,6 +1000,9 @@ func _on_calc_voyage() -> void:
 	var res := TravelSim.simulate(cfg)
 	_appliquer_consos(res)
 	jours_total += int(res["jours_count"])
+	avancer_jours(jours_total)
+	articles_trouves.clear()
+	corps_recherche = null
 	var sal: int = salaire_jour() * jours_total
 	credits = maxi(0, credits - sal)
 	var ligne_march := ""
@@ -998,6 +1099,9 @@ func _on_voyage_inter(body: Dictionary) -> void:
 	}
 	var res := TravelSim.simulate(cfg)
 	_appliquer_consos(res)
+	avancer_jours(int(res["jours_count"]))
+	articles_trouves.clear()
+	corps_recherche = null
 	var sal: int = salaire_jour() * int(res["jours_count"])
 	credits = maxi(0, credits - sal)
 	var ligne_march := ""
@@ -1111,6 +1215,8 @@ func _on_recruit_hired(c: Character) -> void:
 	refresh_all()
 
 func refresh_all() -> void:
+	calendar_label.text = "Calendrier galactique : %s · année %s" % [MAUtils.galdate(jours_ecoules), MAUtils.fmt_int(MAUtils.annee_galactique(jours_ecoules))]
+	jours_label.text = "Jours écoulés depuis le premier jour : %d" % jours_ecoules
 	ship_name_label.text = "Vaisseau : %s (%s)" % [ship.nom, ship.modele]
 	pos_label.text = "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	refresh_ship_health()
@@ -1130,15 +1236,28 @@ func refresh_all() -> void:
 	galaxy_map.queue_redraw()
 	travel_info_label.text = "Radix : %s / %s PC · Vitesse : %d PC/j" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), ship.vitesse_hyper_pc_j]
 	var dk := docked()
+	if corps_recherche != null and corps_recherche != ship_body:
+		articles_trouves.clear()
+		corps_recherche = null
+	var est_rel: bool = current_system != null and current_system.est_relais
 	var items: Array
 	var titre: String
-	if current_system != null and current_system.est_relais:
+	var prix_over := {}
+	if est_rel:
 		items = ShopTables.STATION_RELAIS
 		titre = "Commerce — station-relais %s (tarifs du comptoir OCG, GdM p125)" % current_system.nom
 	else:
-		items = ShopTables.CATALOGUE + ShopTables.MARCHANDISES
-		titre = "Commerce — planète %s (catalogue MdJ p234-243 + marchandises p233)" % (current_system.nom if current_system != null else "?")
-	shop_panel.set_catalog(items, titre, credits, soute_used(), ship.soute, dk, cours_txt(), cours_actuel())
-	ship_panel.set_context(cours_actuel(), marchandage_mod, dk, radix_unit_price())
+		items = []
+		for nom in articles_trouves.keys():
+			var it: Variant = ShopTables.find_catalogue(nom)
+			if it == null:
+				it = ShopTables.find_marchandise(nom)
+			if it != null:
+				items.append(it)
+				prix_over[nom] = articles_trouves[nom]
+		var sys_nom: String = current_system.nom if current_system != null else "?"
+		titre = "Commerce — planète %s (catalogue MdJ p234-243 + marchandises p233 ; %d article(s) trouvé(s))" % [sys_nom, articles_trouves.size()]
 	_update_info_label()
 	_update_buttons()
+	shop_panel.set_catalog(items, titre, credits, soute_used(), ship.soute, dk, cours_txt(), cours_actuel(), prix_over, est_rel)
+	ship_panel.set_context(cours_actuel(), marchandage_mod, dk, radix_unit_price())

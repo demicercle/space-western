@@ -39,3 +39,14 @@ static func hex_color(s: String) -> Color:
 	if s.begins_with("#"):
 		return Color.html(s)
 	return Color(0.65, 0.75, 0.85)
+
+static func galdate(jours_ecoules: int) -> String:
+	var n := maxi(0, jours_ecoules) % 250
+	var m := n / 25 + 1
+	var rem := n % 25
+	var w := rem / 5 + 1
+	var d := rem % 5 + 1
+	return "%02d%02d.%02d" % [m, w, d]
+
+static func annee_galactique(jours_ecoules: int) -> int:
+	return 50000 + maxi(0, jours_ecoules) / 250
