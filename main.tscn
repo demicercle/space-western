@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://c6od53gb55wn3"]
+[gd_scene format=3 uid="uid://c6od53gb55wn3"]
 
-[ext_resource type="Script" path="res://main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://j7ws786666fc" path="res://main.gd" id="1_main"]
 
 [node name="Main" type="Control" unique_id=1553018529]
 layout_mode = 3
@@ -11,56 +11,77 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main")
 
-[node name="HSplit" type="HSplitContainer" parent="."]
+[node name="HSplit" type="HSplitContainer" parent="." unique_id=1086465181]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+split_offsets = PackedInt32Array(300)
 split_offset = 300
 
-[node name="LeftPanel" type="PanelContainer" parent="HSplit"]
+[node name="LeftPanel" type="PanelContainer" parent="HSplit" unique_id=1764852422]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
 
-[node name="LeftVBox" type="VBoxContainer" parent="HSplit/LeftPanel"]
+[node name="LeftVBox" type="VBoxContainer" parent="HSplit/LeftPanel" unique_id=419560403]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="RightVBox" type="VBoxContainer" parent="HSplit"]
+[node name="RightVBox" type="VBoxContainer" parent="HSplit" unique_id=358238205]
 layout_mode = 2
 
-[node name="TopBar" type="HBoxContainer" parent="HSplit/RightVBox"]
+[node name="TopBar" type="HBoxContainer" parent="HSplit/RightVBox" unique_id=738947115]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="Tabs" type="TabContainer" parent="HSplit/RightVBox/TopBar"]
+[node name="Tabs" type="TabContainer" parent="HSplit/RightVBox/TopBar" unique_id=693298599]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+current_tab = 0
 
-[node name="PauseButton" type="Button" parent="HSplit/RightVBox/TopBar"]
+[node name="TabGalaxie" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=1046330976]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="TabSysteme" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=1641602498]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=1352252322]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 2
+
+[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=954161746]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 3
+
+[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=480138062]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 4
+
+[node name="TabRecruter" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=374396623]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 5
+
+[node name="PauseButton" type="Button" parent="." unique_id=1340052009]
 unique_name_in_owner = true
-layout_mode = 2
-text = "Pause (F1)"
-
-[node name="TabGalaxie" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
-layout_mode = 2
-
-[node name="TabSysteme" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
-layout_mode = 2
-
-[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
-layout_mode = 2
-
-[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
-layout_mode = 2
-
-[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
-layout_mode = 2
-
-[node name="TabRecruter" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -64.0
+offset_bottom = 32.0
+grow_horizontal = 0
+scale = Vector2(0.8, 0.8)
+pivot_offset = Vector2(32, 16)
+text = "F1"
