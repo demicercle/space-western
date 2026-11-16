@@ -254,21 +254,21 @@ func _build_tabs() -> void:
 	recruit_panel.recruit_hired.connect(_on_recruit_hired)
 
 func _build_main_layout() -> void:
-	var topbar := tabs.get_parent()
-	var rv := topbar.get_parent()
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 8)
-	hb.size_flags_horizontal = SIZE_EXPAND_FILL
-	hb.size_flags_vertical = SIZE_EXPAND_FILL
-	rv.add_child(hb)
-	topbar.remove_child(tabs)
-	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
-	tabs.size_flags_vertical = SIZE_EXPAND_FILL
-	hb.add_child(tabs)
+	var hsplit: HSplitContainer = left_vbox.get_parent().get_parent()
+	var rv: VBoxContainer = tabs.get_parent().get_parent()
+	var main_hb := HBoxContainer.new()
+	main_hb.add_theme_constant_override("separation", 8)
+	main_hb.size_flags_horizontal = SIZE_EXPAND_FILL
+	main_hb.size_flags_vertical = SIZE_EXPAND_FILL
+	hsplit.add_child(main_hb)
+	hsplit.remove_child(rv)
+	rv.size_flags_horizontal = SIZE_EXPAND_FILL
+	rv.size_flags_vertical = SIZE_EXPAND_FILL
+	main_hb.add_child(rv)
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(370, 0)
 	side.add_theme_constant_override("separation", 4)
-	hb.add_child(side)
+	main_hb.add_child(side)
 	var jh := Label.new()
 	jh.text = "Journal de bord :"
 	jh.add_theme_font_size_override("font_size", 13)
