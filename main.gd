@@ -70,6 +70,7 @@ var panel_style: StyleBoxFlat
 var ship_health_label: Label
 var ship_health_bar: ProgressBar
 var radix_label: Label
+var rations_label: Label
 var itineraire_label: Label
 var pause_menu: PopupMenu
 
@@ -139,6 +140,10 @@ func _build_left_panel() -> void:
 	radix_label.add_theme_font_size_override("font_size", 12)
 	radix_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
 	left_vbox.add_child(radix_label)
+	rations_label = Label.new()
+	rations_label.add_theme_font_size_override("font_size", 12)
+	rations_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+	left_vbox.add_child(rations_label)
 	credits_label = Label.new()
 	credits_label.add_theme_font_size_override("font_size", 14)
 	credits_label.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
@@ -432,6 +437,18 @@ func refresh_ship_health() -> void:
 	ship_health_bar.max_value = maxf(1.0, float(ship.coque_pv))
 	ship_health_bar.value = clampf(float(ship.structure_pv), 0.0, ship_health_bar.max_value)
 
+func rations_necessaires() -> int:
+	if destination.x < 0 or ship == null:
+		return characters.size()
+	var jours := float(distance) / float(maxi(1, ship.vitesse_hyper_pc_j))
+	var j_r := int(ceil(jours))
+	if absf(jours - roundf(jours)) < 0.001:
+		j_r = int(round(jours))
+	return j_r * characters.size()
+
+func rations_dispo() -> int:
+	return ship.rations + int(ship.cargaison.get("Repas", 0))
+
 func _itineraire_txt() -> String:
 	if destination.x < 0 or ship == null:
 		return "Aucun itinéraire tracé."
@@ -446,11 +463,8 @@ func _itineraire_txt() -> String:
 		duree += " %d h" % h
 	if j == 0 and h == 0:
 		duree = "moins d'une heure"
-	var j_r := int(ceil(jours))
-	if absf(jours - roundf(jours)) < 0.001:
-		j_r = int(round(jours))
-	var rations := j_r * characters.size()
-	var en_soute := ship.rations + int(ship.cargaison.get("Repas", 0))
+	var rations := rations_necessaires()
+	var en_soute := rations_dispo()
 	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (en soute : %d)" % [MAUtils.fmt_int(distance), duree, rations, en_soute]
 
 func avancer_jours(n: int) -> void:
@@ -1327,6 +1341,15 @@ func refresh_all() -> void:
 	pos_label.text = "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	refresh_ship_health()
 	radix_label.text = "Radix : %s / %s PC" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
+	var rd: int = rations_dispo()
+	var besoin: int = rations_necessaires()
+	rations_label.text = "Rations en soute : %d (besoin : %d)" % [rd, besoin]
+	if rd <= 0:
+		rations_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	elif rd < besoin:
+		rations_label.add_theme_color_override("font_color", Color(1.0, 0.65, 0.3))
+	else:
+		rations_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
 	credits_label.text = "Crédits : %s €" % MAUtils.fmt_int(credits)
 	captain_label.text = "Capitaine : %s" % (captain.nom if captain != null else "—")
 	for c in characters:
