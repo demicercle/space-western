@@ -34,6 +34,8 @@ const SCAN_EXTRA := ["classe", "diametre", "atmosphere", "environnement", "eau",
 
 static var _re_int := RegEx.create_from_string("[0-9]+")
 
+const EFFACER_ARTICLES_QUAND_RECHERCHE := true
+
 func _securite_planete() -> int:
 	if ship_body == null:
 		return 0
@@ -629,12 +631,14 @@ func _on_scanner() -> void:
 			infos.append("astroport")
 		var extra: int = int(r["extra"])
 		var nouvelles: Array = []
+		var restantes: Array = []
 		for k in SCAN_EXTRA:
-			if nouvelles.size() >= extra:
-				break
 			if not infos.has(k):
-				infos.append(k)
-				nouvelles.append(k)
+				restantes.append(k)
+		restantes.shuffle()
+		for i in range(mini(extra, restantes.size())):
+			infos.append(restantes[i])
+			nouvelles.append(restantes[i])
 		sb["scan"] = {"ok": true, "astroport": astro, "infos": infos}
 		bb += "[color=7bed9f]Scan réussi[/color] — astroport %s et sa fréquence radio (commerce/recrutement autorisés si cours > 0).\n" % ("détecté" if astro else "NON détecté sur ce corps")
 		if nouvelles.size() > 0:
@@ -665,6 +669,8 @@ func _on_rechercher() -> void:
 	if captain == null:
 		shop_panel.set_message("Pas de capitaine désigné pour mener la recherche.")
 		return
+	if EFFACER_ARTICLES_QUAND_RECHERCHE:
+		articles_trouves.clear()
 	var sb: Dictionary = ship_body
 	var cours := cours_actuel()
 	var com: String = str(sb.get("commerce", "")).to_lower()
@@ -732,7 +738,10 @@ func _on_rechercher() -> void:
 	corps_recherche = ship_body
 	avancer_jours(1)
 	refresh_all()
-	shop_panel.set_message("Recherche d'articles à %s (%s) : %d test(s), +1 jour (durée « Faire ses courses », MdJ p271) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()])
+	var msg_rech := "Recherche d'articles à %s (%s) : %d test(s), +1 jour (durée « Faire ses courses », MdJ p271) — calendrier %s (année %d, %d jour(s) écoulé(s)) — %d nouvel article(s), %d au total." % [str(sb.get("nom", "?")), str(sb.get("commerce", "?")), tests, MAUtils.galdate(jours_ecoules), MAUtils.annee_galactique(jours_ecoules), jours_ecoules, nouveaux, articles_trouves.size()]
+	if EFFACER_ARTICLES_QUAND_RECHERCHE:
+		msg_rech += " (recherche précédente effacée)"
+	shop_panel.set_message(msg_rech)
 	if log != "":
 		journal.text += "\n[b][color=gold]Recherche d'articles — %s, %s (année %d)[/color][/b]\n" % [MAUtils.galdate(jours_ecoules), str(sb.get("nom", "?")), MAUtils.annee_galactique(jours_ecoules)] + log
 

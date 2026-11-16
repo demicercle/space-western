@@ -227,6 +227,11 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 			btn.pressed.connect(_on_buy.bind(it))
 			cell.add_child(btn)
 		grid.add_child(cell)
+	var counts := [0, 0, 0, 0, 0]
+	for it in items:
+		counts[_tab_of(str(it.get("cat", "")))] += 1
+	for i in range(TAB_TITLES.size()):
+		tabs.set_tab_title(i, "%s (%d)" % [TAB_TITLES[i], counts[i]])
 	if p_docked and not est_relais and items.size() == 0:
 		set_message("Aucun article trouvé pour l'instant — cliquez sur « Rechercher des articles ».")
 
