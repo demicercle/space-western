@@ -32,6 +32,16 @@ var corps_recherche: Variant = null
 
 const SCAN_EXTRA := ["classe", "diametre", "atmosphere", "environnement", "eau", "gravite", "systeme_orbital", "commerce", "securite", "sources d'énergie", "satellites artificiels ou trafic aérien", "dégagements d'énergie typiques de combats spatiaux en orbite"]
 
+static var _re_int := RegEx.create_from_string("[0-9]+")
+
+func _securite_planete() -> int:
+	if ship_body == null:
+		return 0
+	var m := _re_int.search(str(ship_body.get("securite", "")))
+	if m == null:
+		return 0
+	return int(m.get_string())
+
 var galaxy_map: GalaxyMap
 var system_map: SystemMap
 var crew_panel: CrewPanel
@@ -709,9 +719,6 @@ func _on_rechercher(illegal := false) -> void:
 		if dispo == "C":
 			mode = "TF"
 			mods += " (TF, dispo C)"
-		if illegal:
-			diff += 1
-			mods += " D+1 (marché noir)"
 		if dispo == "A":
 			diff += 1
 			mods += " D+1 (dispo A)"
@@ -723,6 +730,13 @@ func _on_rechercher(illegal := false) -> void:
 			diff += 1
 			mods += " D+1 (planète pauvre)"
 		var r := Dice.test(nd, diff, mode)
+		if illegal:
+			var secu := _securite_planete()
+			if secu > 0:
+				var rs := Dice.test(secu, 1)
+				if int(rs["succ"]) > int(r["succ"]):
+					log += "  [color=ff5544]Recherche repérée par la sécurité[/color] — patrouille (%d dés : %s = %d succès) bat le test d'Illégalités de %s (%s = %d succès) : %s non trouvé\n" % [secu, Dice.fmt_jet(rs), int(rs["succ"]), nom, Dice.fmt_jet(r), int(r["succ"]), nom]
+					continue
 		if not r["ok"]:
 			continue
 		var mod := 1.0
