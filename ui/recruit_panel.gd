@@ -108,7 +108,7 @@ func set_enabled_state(docked: bool, credits: int, crew_size: int, crew_max: int
 	trouver_btn.disabled = not docked
 	recruter_btn.disabled = not docked or recrue == null or credits < (recrue.prix_recrutement if recrue != null else 0) or crew_size >= crew_max
 	if not docked:
-		set_message("Recrutement impossible : le vaisseau n'est pas sur une planète ou une station-relais.")
+		set_message("Recrutement impossible, trouvez une station-relais ou une planète habitée.")
 	elif crew_size >= crew_max:
 		set_message("Le vaisseau est plein (%d/%d)." % [crew_size, crew_max])
 	elif recrue != null and credits < recrue.prix_recrutement:

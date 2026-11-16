@@ -6,6 +6,7 @@ signal cell_clicked(col: int, row: int)
 var map_tex: Texture2D
 var current_pos := GalaxyData.EXXALIA
 var destination := Vector2i(-1, -1)
+var selected_cell := Vector2i(-1, -1)
 var explored: Array = []
 var hover := Vector2i(-1, -1)
 var _origin := Vector2.ZERO
@@ -101,6 +102,11 @@ func _draw() -> void:
 		var hp := _cell_center(hover.x, hover.y)
 		var cell := _scale * _geo_f("pas_x")
 		draw_rect(Rect2(hp - Vector2(cell * 0.5, cell * 0.5), Vector2(cell, cell)), Color(1, 1, 1, 0.12), true)
+	if selected_cell.x > 0:
+		var ps := _cell_center(selected_cell.x, selected_cell.y)
+		var cell_s := _scale * _geo_f("pas_x")
+		draw_rect(Rect2(ps - Vector2(cell_s * 0.5, cell_s * 0.5), Vector2(cell_s, cell_s)), Color(1.0, 0.85, 0.3, 0.16), true)
+		draw_rect(Rect2(ps - Vector2(cell_s * 0.5, cell_s * 0.5), Vector2(cell_s, cell_s)), Color(1.0, 0.85, 0.3, 0.95), false, 2.0)
 	if destination.x > 0:
 		var pd := _cell_center(destination.x, destination.y)
 		var cell := _scale * _geo_f("pas_x")

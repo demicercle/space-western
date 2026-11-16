@@ -69,7 +69,7 @@ class MapCanvas extends Control:
 			else:
 				draw_circle(p, br, col)
 			draw_circle(p, br, Color(0, 0, 0, 0.4), false, 1.0)
-			draw_string(ThemeDB.fallback_font, p + Vector2(br + 3, -br - 2), "%s (orbite %d US)" % [body.get("nom", "?"), body["orbite"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.9, 0.92, 0.98, 0.95))
+			draw_string(ThemeDB.fallback_font, p + Vector2(br + 3, -br - 2), "%s (orbite %s US)" % [body.get("nom", "?"), MAUtils.fmt_num(float(body["orbite"]))], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.9, 0.92, 0.98, 0.95))
 			if body == selected_body:
 				draw_arc(p, 13.0, 0.0, TAU, 32, Color(1.0, 0.85, 0.3, 0.95), 2.0)
 			i += 1
@@ -82,7 +82,7 @@ class MapCanvas extends Control:
 			draw_line(sp + Vector2(-8, 8), sp + Vector2(8, -8), Color(0, 0, 0, 0.85), 3.5)
 			draw_line(sp + Vector2(-8, -8), sp + Vector2(8, 8), col, 1.6)
 			draw_line(sp + Vector2(-8, 8), sp + Vector2(8, -8), col, 1.6)
-			draw_string(ThemeDB.fallback_font, sp + Vector2(10, -10), "Vaisseau (%d US)" % int(round(ship_orbite)), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.45, 0.4))
+			draw_string(ThemeDB.fallback_font, sp + Vector2(10, -10), "Vaisseau (%s US)" % MAUtils.fmt_num(ship_orbite), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.45, 0.4))
 
 var canvas: MapCanvas
 var details: RichTextLabel
@@ -95,6 +95,7 @@ var selected_dist: Variant = null
 var ship_orbite := -1.0
 var ship_angle := 0.0
 var ship_body: Variant = null
+var is_current_system := true
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 10)
@@ -155,17 +156,20 @@ func select_body(body: Variant) -> void:
 	canvas.queue_redraw()
 	selected_dist = null
 	if body != null:
-		travel_button.disabled = false
+		travel_button.disabled = not is_current_system
 		travel_button.text = "Voyager vers %s" % str(body.get("nom", "?"))
+		if not is_current_system:
+			travel_button.tooltip_text = "Voyage interplanétaire possible uniquement dans le système actuel du vaisseau"
 		if sys != null and ship_orbite >= 0.0:
 			selected_dist = StarSystem.distance_inter(ship_orbite, float(body["orbite"]))
 	else:
 		travel_button.disabled = true
 		travel_button.text = "Voyager vers ce corps"
+		travel_button.tooltip_text = ""
 	_render_details()
 
 func _on_travel_pressed() -> void:
-	if selected_body != null:
+	if selected_body != null and is_current_system:
 		travel_requested.emit(selected_body)
 
 func set_system(s: StarSystem) -> void:
@@ -187,7 +191,7 @@ func set_ship_pos(o: float, angle: float, body: Variant) -> void:
 	_render_details()
 
 func _body_bb(body: Dictionary) -> String:
-	var bb := "\n[color=cyan]▸ %s[/color] — %s, orbite %d US (saut : %d US)\n" % [body.get("nom", "?"), body.get("classe", body["type"]), body["orbite"], body["distance_saut"]]
+	var bb := "\n[color=cyan]▸ %s[/color] — %s, orbite %s US (saut : %s US)\n" % [body.get("nom", "?"), body.get("classe", body["type"]), MAUtils.fmt_num(float(body["orbite"])), MAUtils.fmt_num(float(body["distance_saut"]))]
 	for k in ["diametre", "atmosphere", "environnement", "temperature", "gravite", "eau", "habitee", "population", "densite", "categorie", "niveau_techno", "gouvernement", "commerce", "cours", "illegal", "astroport", "securite", "systeme_orbital"]:
 		if body.has(k) and str(body[k]) != "" and str(body[k]) != "false":
 			bb += "    %s : %s\n" % [k, body[k]]
@@ -205,23 +209,26 @@ func _render_details() -> void:
 		details.text = ""
 		return
 	var bb := "[b][color=gold]%s[/color][/b] (%s-%d)\n" % [sys.nom, sys.quad_x, sys.quad_y]
+	if not is_current_system:
+		bb += "[i]Système affiché : case sélectionnée sur la carte galactique — le vaisseau n'est pas dans ce système (informations en lecture seule).[/i]\n"
 	bb += "Étoile : %s, diamètre %s · Limite : %d US\n" % [sys.etoile, sys.diam_etoile, sys.limite]
 	bb += "Nation : %s\nRoute : %s\nGouvernement : %s\n" % [sys.nation, sys.route, sys.gouvernement]
 	bb += "Patrouille : %s (coût %s) · Trafic : %s — %s\n" % [sys.patrouille, sys.cout_pat, sys.trafic, sys.trafic_desc]
 	bb += "Activité solaire : %s (%s près de l'étoile)\n" % [sys.act_solaire, sys.act_solaire_proche]
-	bb += "\n[b]Position du vaisseau[/b] : "
-	if ship_body != null:
-		bb += "%s (orbite %d US)\n" % [str(ship_body.get("nom", "?")), int(ship_body["orbite"])]
-	else:
-		bb += "limite de saut du système (%d US)\n" % sys.limite
+	if is_current_system:
+		bb += "\n[b]Position du vaisseau[/b] : "
+		if ship_body != null:
+			bb += "%s (orbite %s US)\n" % [str(ship_body.get("nom", "?")), MAUtils.fmt_num(float(ship_body["orbite"]))]
+		else:
+			bb += "limite de saut du système (%d US)\n" % sys.limite
 	if selected_body != null and sys.corps.has(selected_body):
 		bb += _body_bb(selected_body)
 	else:
 		bb += "\n[i]Cliquez sur un corps céleste de la carte pour afficher sa description.[/i]\n"
 		for body in sys.corps:
-			bb += "▸ %s — orbite %d US\n" % [body.get("nom", "?"), body["orbite"]]
+			bb += "▸ %s — orbite %s US\n" % [body.get("nom", "?"), MAUtils.fmt_num(float(body["orbite"]))]
 	if sys.ceinture != null:
-		bb += "\n▸ %s, orbite %d US\n" % [sys.ceinture["nom"], sys.ceinture["orbite"]]
+		bb += "\n▸ %s, orbite %s US\n" % [sys.ceinture["nom"], MAUtils.fmt_num(float(sys.ceinture["orbite"]))]
 	details.text = bb
 
 func set_message(t: String) -> void:

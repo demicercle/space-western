@@ -323,6 +323,14 @@ func peut_amarrer() -> bool:
 			return true
 	return false
 
+static func parse_cours(cours: String) -> Dictionary:
+	var def := {"A": 1.0, "B": 1.0, "C": 1.0}
+	if cours.contains("A :"):
+		var re := RegEx.create_from_string("([ABC]) : ([0-9]+(?:[.,][0-9]+)?)")
+		for m in re.search_all(cours):
+			def[m.get_string(1)] = float(m.get_string(2).replace(",", "."))
+	return def
+
 func cours_dict() -> Dictionary:
 	var def := {"A": 1.0, "B": 1.0, "C": 1.0}
 	if est_relais:
@@ -330,11 +338,7 @@ func cours_dict() -> Dictionary:
 	for c in corps:
 		var cours: String = str(c.get("cours", ""))
 		if c.get("habitee", false) and cours.contains("A :"):
-			var re := RegEx.new()
-			re.compile("([ABC]) : ([0-9]+(?:[.,][0-9]+)?)")
-			for m in re.search_all(cours):
-				def[m.get_string(1)] = float(m.get_string(2).replace(",", "."))
-			return def
+			return parse_cours(cours)
 	return def
 
 static func assurer_planete(s: StarSystem, nom: String) -> void:
