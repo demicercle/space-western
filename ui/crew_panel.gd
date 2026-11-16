@@ -59,39 +59,35 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	var sep := HSeparator.new()
 	vb.add_child(sep)
 	var cl := Label.new()
-	cl.text = "Caractéristiques"
+	cl.text = "Caractéristiques & compétences (5 colonnes : 1 colonne = 1 caractéristique = 1 domaine = ses compétences ; +0 en grisé)"
+	cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cl.add_theme_font_size_override("font_size", 12)
 	vb.add_child(cl)
 	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 8)
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 8)
 	vb.add_child(grid)
-	for car in NPCTables.CARACS:
-		var l := Label.new()
-		l.text = "%s : %d" % [car, c.caracs[car]]
-		l.add_theme_font_size_override("font_size", 11)
-		grid.add_child(l)
-	var sep2 := HSeparator.new()
-	vb.add_child(sep2)
-	var cml := Label.new()
-	cml.text = "Compétences (toutes, triées par domaine ; +0 en grisé)"
-	cml.add_theme_font_size_override("font_size", 12)
-	vb.add_child(cml)
 	for d in NPCTables.DOMAINES:
-		var dl := Label.new()
-		dl.text = "%s :" % d
-		dl.add_theme_font_size_override("font_size", 11)
-		dl.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
-		vb.add_child(dl)
+		var car: String = NPCTables.DOMAINES_CARAC[d]
+		var cell := VBoxContainer.new()
+		cell.custom_minimum_size = Vector2(150, 0)
+		cell.add_theme_constant_override("separation", 1)
+		grid.add_child(cell)
+		var hl := Label.new()
+		hl.text = "%s : %d (%s)" % [car, c.caracs[car], d]
+		hl.add_theme_font_size_override("font_size", 11)
+		hl.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
+		cell.add_child(hl)
 		for cn in NPCTables.COMPETENCES[d]:
 			var base: String = str(cn).trim_suffix(" (au choix)")
 			var lv: int = c.get_comp(base)
 			var l := Label.new()
-			l.text = "    %s +%d" % [cn, lv]
-			l.add_theme_font_size_override("font_size", 11)
+			l.text = "  %s +%d" % [cn, lv]
+			l.add_theme_font_size_override("font_size", 10)
 			if lv == 0:
 				l.add_theme_color_override("font_color", Color(0.5, 0.52, 0.6))
-			vb.add_child(l)
+			cell.add_child(l)
 	var sep3 := HSeparator.new()
 	vb.add_child(sep3)
 	var sl := Label.new()
