@@ -66,7 +66,10 @@ func set_body(body: Variant, graine: int) -> void:
 		b["planet_map"] = PlanetMap.generer(b, graine)
 	map = b["planet_map"]
 	var coord_lbl := "cubic (q, r, s)" if str(map["coord"]) == "cubic" else "axial (q, r)"
-	title_label.text = "Explorer — %s (%s, %d cases · coordonnées %s)" % [str(map["nom"]), str(map["classe"]), map["cells"].size(), coord_lbl]
+	var taille_txt := "%d cases" % map["cells"].size()
+	if int(map.get("rayon", 0)) > 0:
+		taille_txt = "rayon %d · %d cases" % [int(map["rayon"]), map["cells"].size()]
+	title_label.text = "Explorer — %s (%s, %s · coordonnées %s)" % [str(map["nom"]), str(map["classe"]), taille_txt, coord_lbl]
 	msg_label.text = ""
 	_legend()
 	info_label.text = "Cliquez sur une case hexagonale pour afficher ses caractéristiques (coordonnées, environnement, construction)."

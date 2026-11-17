@@ -308,24 +308,37 @@ static func _gen_constructions(body: Dictionary, envs: Array, cells: Array, clas
 		_placer(constr, libres, cells, envs, "Crique", true, classe_m)
 	return constr
 
+static func rayon_equivalent(n: int) -> int:
+	return maxi(1, int(ceil((3.0 + sqrt(maxf(0.0, 12.0 * n - 3.0))) / 6.0)))
+
 static func generer(body: Dictionary, graine: int) -> Dictionary:
 	seed(graine)
 	var type: String = str(body.get("type", "planète"))
 	var diam := parse_diametre(body.get("diametre", "10 K"))
 	var coord := "axial"
-	var taille := 64.0
-	var n := 3 + int(diam)
-	if type == "station":
+	var taille := 76.0
+	var n := 1
+	var rayon := 0
+	if type == "station" or type == "planétoïde":
 		coord = "cubic"
-		taille = 76.0
-		n = maxi(1, int(round(diam)))
-	elif type == "planétoïde":
-		taille = 76.0
 		n = maxi(1, int(round(diam)))
 	elif type == "géante gazeuse":
-		taille = 32.0
-		n = maxi(1, int(diam))
+		rayon = clampi(int(round(diam / 4.8)), 1, 31)
+		n = 3 * rayon * (rayon - 1) + 1
+	else:
+		rayon = clampi(int(round(diam / 1.8)), 1, 31)
+		n = 3 * rayon * (rayon - 1) + 1
+	if coord == "axial":
+		var r_eq := rayon_equivalent(n)
+		if r_eq >= 32:
+			taille = 4.0
+		elif r_eq >= 16:
+			taille = 16.0
+		elif r_eq >= 8:
+			taille = 32.0
+		else:
+			taille = 64.0
 	var cells := hex_grille(n, coord)
 	var envs := _gen_envs(body, type, cells)
 	var constr := _gen_constructions(body, envs, cells, type == "planète")
-	return {"nom": str(body.get("nom", "?")), "classe": type, "coord": coord, "taille": taille / 2.0, "cells": cells, "envs": envs, "constr": constr}
+	return {"nom": str(body.get("nom", "?")), "classe": type, "coord": coord, "taille": taille / 2.0, "rayon": rayon, "cases": n, "cells": cells, "envs": envs, "constr": constr}
