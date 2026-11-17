@@ -4,6 +4,7 @@ extends GridContainer
 signal travel_requested(body: Dictionary)
 signal scan_requested
 signal explore_requested
+signal commerce_requested
 
 const SCAN_GATED := ["classe", "diametre", "atmosphere", "environnement", "eau", "gravite", "systeme_orbital", "commerce", "securite", "astroport"]
 const SCAN_TEXT_INFOS := ["sources d'énergie", "satellites artificiels ou trafic aérien", "dégagements d'énergie typiques de combats spatiaux en orbite"]
@@ -99,6 +100,7 @@ var body_details: RichTextLabel
 var travel_button: Button
 var scan_button: Button
 var explorer_button: Button
+var commerce_button: Button
 var sys_msg: Label
 var journal_label: RichTextLabel
 var sys: StarSystem
@@ -148,6 +150,10 @@ func _ready() -> void:
 	explorer_button.text = "Explorer"
 	explorer_button.pressed.connect(_on_explore_pressed)
 	btns.add_child(explorer_button)
+	commerce_button = Button.new()
+	commerce_button.text = "Commerce"
+	commerce_button.pressed.connect(_on_commerce_pressed)
+	btns.add_child(commerce_button)
 	sys_msg = Label.new()
 	sys_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sys_msg.add_theme_font_size_override("font_size", 11)
@@ -231,6 +237,9 @@ func _on_scan_pressed() -> void:
 
 func _on_explore_pressed() -> void:
 	explore_requested.emit()
+
+func _on_commerce_pressed() -> void:
+	commerce_requested.emit()
 
 func refresh_scan_button() -> void:
 	var show: bool = is_current_system and sys != null and ship_body != null and sys.corps.has(ship_body) and selected_body != null and selected_body == ship_body
