@@ -30,6 +30,7 @@ var prix := 0
 var origine := ""
 var systemes_secondaires: Array = []
 var cargaison := {}
+var recup := {}
 var rations := 0
 var radix_pc := 0
 
