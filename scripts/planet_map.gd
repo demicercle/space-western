@@ -211,7 +211,8 @@ static func _valider_cotes(pool: Array, envs: Array, cells: Array) -> Array:
 					envs[i] = MAUtils.pick(pool2)
 				modif = true
 	return envs
-const SITES_HABITES := {"Colonie": 1000, "Village": 10000, "Astroport": 100000, "Ville": 1000000, "Mégalopole": 1000000000}
+const SITES_HABITES := {"Colonie": 1000, "Village": 5000, "Astroport": 100000, "Ville": 1000000, "Mégalopole": 50000000}
+const POP_MAX := 10000000000
 const SITE_NATUREL := "Crique"
 const SITES_RECUP := ["Ruines", "Décharge", "Champ de bataille", "Épave"]
 
@@ -240,11 +241,12 @@ static func parse_population(txt: String) -> int:
 	if m == null:
 		return 0
 	var n := int(m.get_string(1).replace(" ", ""))
+	var v := n
 	if t.contains("milliard"):
-		return n * 1000000000
-	if t.contains("million"):
-		return n * 1000000
-	return n
+		v = n * 1000000000
+	elif t.contains("million"):
+		v = n * 1000000
+	return mini(v, POP_MAX)
 
 static func pop_txt(pop: int) -> String:
 	if pop <= 0:
@@ -261,16 +263,16 @@ static func sites_habites(pop: int) -> Array:
 		return out
 	if pop <= 1000:
 		out.append("Colonie")
-	elif pop <= 10000:
+	elif pop <= 5000:
 		out.append("Village")
 	elif pop <= 100000:
 		out.append("Astroport")
 	elif pop <= 1000000:
 		out.append("Ville")
-	elif pop <= 1000000000:
+	elif pop <= 50000000:
 		out.append("Mégalopole")
 	else:
-		var n := int(ceil(pop / 1000000000.0))
+		var n := int(ceil(pop / 50000000.0))
 		for i in n:
 			out.append("Mégalopole")
 	return out

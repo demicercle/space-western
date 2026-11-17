@@ -233,12 +233,12 @@ static func _gen_corps(orbite: int, sys: StarSystem) -> Dictionary:
 			c["densite"] = densite
 			var diams := 0 if diam <= 5 else (1 if diam <= 9 else (2 if diam <= 15 else (3 if diam <= 20 else (4 if diam <= 25 else 5))))
 			var pops := [
-				["100 millions", "500 millions", "1 milliard", "5 milliards", "10 milliards", "500 milliards"],
-				["1 milliard", "2 milliards", "3 milliards", "8 milliards", "15 milliards", "2 000 milliards"],
-				["3 milliards", "5 milliards", "8 milliards", "25 milliards", "50 milliards", "5 000 milliards"],
-				["5 milliards", "10 milliards", "15 milliards", "50 milliards", "100 milliards", "10 000 milliards"],
-				["10 milliards", "15 milliards", "25 milliards", "100 milliards", "250 milliards", "25 000 milliards"],
-				["20 milliards", "30 milliards", "50 milliards", "250 milliards", "500 milliards", "50 000 milliards"],
+				["100 millions", "500 millions", "1 milliard", "5 milliards", "10 milliards", "10 milliards"],
+				["1 milliard", "2 milliards", "3 milliards", "8 milliards", "10 milliards", "10 milliards"],
+				["3 milliards", "5 milliards", "8 milliards", "10 milliards", "10 milliards", "10 milliards"],
+				["5 milliards", "10 milliards", "10 milliards", "10 milliards", "10 milliards", "10 milliards"],
+				["10 milliards", "10 milliards", "10 milliards", "10 milliards", "10 milliards", "10 milliards"],
+				["10 milliards", "10 milliards", "10 milliards", "10 milliards", "10 milliards", "10 milliards"],
 			]
 			var densites := ["Déserte", "Peu peuplée", "Moyennement peuplée", "Très peuplée", "Totalement urbanisée", "Planète ville"]
 			c["population"] = pops[diams][densites.find(densite)] + " d'habitants"
