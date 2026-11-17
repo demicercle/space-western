@@ -73,6 +73,7 @@ var voyage_dialog: AcceptDialog
 var pending_voyage: Callable
 var sell_dialog: AcceptDialog
 var sell_edit: LineEdit
+var sell_price_label: Label
 var pending_sell := ""
 var pending_virer: Character = null
 var panel_style: StyleBoxFlat
@@ -314,6 +315,11 @@ func _build_context_menu() -> void:
 	sell_edit = LineEdit.new()
 	sell_edit.placeholder_text = "quantité à vendre"
 	sell_dialog.add_child(sell_edit)
+	sell_price_label = Label.new()
+	sell_price_label.add_theme_font_size_override("font_size", 13)
+	sell_price_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.7))
+	sell_dialog.add_child(sell_price_label)
+	sell_edit.text_changed.connect(func(_t: String) -> void: _update_sell_price())
 	sell_dialog.confirmed.connect(_on_sell_dialog_confirmed)
 	sell_dialog.canceled.connect(func() -> void: pending_sell = "")
 
@@ -663,6 +669,29 @@ func _on_sell(nom: String) -> void:
 		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en unités. En soute : %s · prix de vente : %s €/u." % [ShopTables.nom_affiche(nom), MAUtils.fmt_num(q), MAUtils.fmt_int(prix)]
 		sell_edit.text = MAUtils.fmt_num(q)
 	sell_dialog.popup_centered()
+	_update_sell_price()
+
+func _sell_q_sold(nom: String, v: float) -> float:
+	if not ship.cargaison.has(nom):
+		return 0.0
+	var q: float = float(ship.cargaison[nom])
+	if ShopTables.est_marchandise(nom):
+		var kg_max := q * ShopTables.place_de(nom) * 1000.0
+		return minf(v, kg_max) / (ShopTables.place_de(nom) * 1000.0)
+	return floor(minf(v, q))
+
+func _update_sell_price() -> void:
+	var nom := pending_sell
+	if nom == "" or not ship.cargaison.has(nom):
+		sell_price_label.text = ""
+		return
+	var prix := ship_panel.prix_vente_unit(nom)
+	var t := sell_edit.text.replace(" ", "").replace(",", ".")
+	var v := t.to_float()
+	if v < 0.0:
+		v = 0.0
+	var gain := int(round(prix * _sell_q_sold(nom, v)))
+	sell_price_label.text = "Prix de vente : %s €" % MAUtils.fmt_int(gain)
 
 func _on_sell_dialog_confirmed() -> void:
 	var nom := pending_sell
@@ -679,15 +708,11 @@ func _on_sell_dialog_confirmed() -> void:
 	if v <= 0.0:
 		ship_panel.set_message("Rien vendu (quantité nulle).")
 		return
-	var q_sold := 0.0
+	var q_sold := _sell_q_sold(nom, v)
 	var qtxt := ""
 	if ShopTables.est_marchandise(nom):
-		var kg_max := q * ShopTables.place_de(nom) * 1000.0
-		var kg := minf(v, kg_max)
-		q_sold = kg / (ShopTables.place_de(nom) * 1000.0)
-		qtxt = "%s kg" % MAUtils.fmt_int(kg)
+		qtxt = "%s kg" % MAUtils.fmt_int(q_sold * ShopTables.place_de(nom) * 1000.0)
 	else:
-		q_sold = floor(minf(v, q))
 		qtxt = "×%d" % int(q_sold)
 	if q_sold <= 0.0001:
 		ship_panel.set_message("Rien vendu.")
