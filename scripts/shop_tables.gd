@@ -142,6 +142,12 @@ static func place_de(nom: String) -> float:
 		return float(st["place"])
 	return 0.1
 
+static func tonnage_txt(q: float, place: float) -> String:
+	var t := q * place
+	if t < 1.0:
+		return "%s kg" % MAUtils.fmt_int(t * 1000.0)
+	return "%s UC" % MAUtils.fmt_num(t)
+
 static func find_marchandise(nom: String) -> Variant:
 	return find_in(MARCHANDISES, nom)
 

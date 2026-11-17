@@ -268,7 +268,7 @@ func _build_tabs() -> void:
 	ship_panel = ShipPanel.new()
 	ship_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(4).add_child(ship_panel)
-	ship_panel.sell_requested.connect(_on_sell)
+
 
 	shop_panel = ShopPanel.new()
 	shop_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -627,22 +627,25 @@ func _on_buy(it: Dictionary) -> void:
 	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + lot
 	if it["nom"] == "Ration":
 		ship.rations = int(ship.cargaison["Ration"])
-	shop_panel.set_message("Acheté : %s pour %s € (%d en soute)." % [ShopTables.nom_affiche(str(it["nom"])), MAUtils.fmt_int(prix), int(ship.cargaison[it["nom"]])])
+	shop_panel.set_message("Acheté : %s pour %s € (%s en soute)." % [ShopTables.nom_affiche(str(it["nom"])), MAUtils.fmt_int(prix), MAUtils.fmt_num(float(ship.cargaison[it["nom"]]))])
 	refresh_all()
 
 func _on_sell(nom: String) -> void:
 	if not peut_commercer():
 		ship_panel.set_message("Vente indisponible ici : %s." % raison_commerce())
 		return
-	if not ship.cargaison.has(nom) or int(ship.cargaison[nom]) <= 0:
+	if not ship.cargaison.has(nom) or float(ship.cargaison[nom]) <= 0.0001:
 		return
 	var prix := ship_panel.prix_vente_unit(nom)
 	if prix <= 0:
 		ship_panel.set_message("%s est invendable ici (cours ×0 pour sa catégorie)." % nom)
 		return
+	if float(ship.cargaison[nom]) < 1.0:
+		ship_panel.set_message("Moins d'une UC de %s en soute : vente à l'unité impossible." % nom)
+		return
 	credits += prix
-	ship.cargaison[nom] = int(ship.cargaison[nom]) - 1
-	if int(ship.cargaison[nom]) <= 0:
+	ship.cargaison[nom] = float(ship.cargaison[nom]) - 1.0
+	if float(ship.cargaison[nom]) <= 0.0001:
 		ship.cargaison.erase(nom)
 	if nom == "Ration":
 		ship.rations = int(ship.cargaison.get("Ration", 0))
@@ -1085,44 +1088,44 @@ func _on_fouiller() -> void:
 	var recap: Array = []
 	var bb := "[b][color=gold]Fouiller[/color][/b] — site « %s », case %d (%s, %d h, 1 jour) — Recherche de %s\n" % [site, idx + 1, MAUtils.galdate(jours_ecoules), heure_jour, roller.nom]
 	for article in PlanetMap.ARTICLES_FOUILLE:
-		var drow: Dictionary = PlanetMap.FOUILLE_DIFF.get(article, {})
-		var diff: int = int(drow.get(site, -1))
-		if diff < 0:
+		var drow: Dictionary = PlanetMap.FOUILLE_TABLE.get(article, {})
+		if not drow.has(site):
 			continue
+		var cell: Array = drow[site]
+		var diff: int = int(cell[0])
+		var montant: int = int(cell[1])
+		var unite: String = str(cell[2])
 		var m := _sante_mod(roller)
 		var r := Dice.test(roller.dice_test("Recherche") + int(m[0]), diff, str(m[1]))
 		bb += "  %s : %s (diff %d) = %d succès%s\n" % [article, Dice.fmt_jet(r), diff, int(r["succ"]), "" if r["ok"] else " — raté"]
 		if not r["ok"]:
 			continue
-		var q: int = maxi(1, int(r["succ"]))
-		var nom := ""
-		var radix := false
-		match article:
-			"Pièces détachées (100 kg)":
-				nom = "Pièces détachées (1 kg)"
-				q = 100 * q
-			"Métaux":
-				nom = "Métaux (1 UC)"
-			"Métaux précieux":
-				nom = "Métaux précieux (1 UC)"
-			"Carburant (Radix)":
-				radix = true
-			"Armes":
-				nom = "Armes (1 UC)"
-			"Artefacts technologiques":
-				nom = "Artefacts technologiques (1 UC)"
-			"Artefacts archéologiques":
-				nom = "Artefacts archéologiques (1 UC)"
-		if radix:
-			ship.radix_pc = mini(ship.autonomie_pc, ship.radix_pc + 1000 * q)
-			recap.append("Radix +%d PC (réserve %s / %s PC)" % [1000 * q, MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)])
+		var extra: int = int(r["extra"])
+		if extra <= 0:
+			bb += "    pas de succès excédentaire — rien pour cet article\n"
+			continue
+		var total: int = montant * extra
+		if unite == "PC":
+			ship.radix_pc = mini(ship.autonomie_pc, ship.radix_pc + total)
+			recap.append("Carburant (Radix) +%d PC (réserve %s / %s PC)" % [total, MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)])
+			bb += "    +%d PC de Radix, automatiquement ajoutés à la réserve (%s / %s PC)\n" % [total, MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
 		else:
+			var nom := ""
+			var q := 0.0
+			if article == "Pièces détachées (100 kg)":
+				nom = "Pièces détachées (1 kg)"
+				q = float(total)
+			else:
+				nom = article + " (1 UC)"
+				q = total / 1000.0
 			var place := ShopTables.place_de(nom) * q
 			if soute_used() + place <= ship.soute + 0.0001:
-				ship.cargaison[nom] = int(ship.cargaison.get(nom, 0)) + q
-				recap.append("%s ×%d" % [nom, q])
+				ship.cargaison[nom] = float(ship.cargaison.get(nom, 0)) + q
+				recap.append("%s : %d kg (soute : %s ×%s)" % [article, total, nom, MAUtils.fmt_num(q)])
+				bb += "    %d kg -> soute : %s ×%s\n" % [total, nom, MAUtils.fmt_num(q)]
 			else:
-				recap.append("%s ×%d PERDU (soute pleine)" % [nom, q])
+				recap.append("%s : %d kg PERDU (soute pleine)" % [article, total])
+				bb += "    %d kg PERDUS (soute pleine)\n" % total
 	fouille[idx] = ", ".join(recap) if not recap.is_empty() else "rien"
 	map["fouille"] = fouille
 	map["fouille_result"] = "Fouillé : « %s » (case %d) — %s" % [site, idx + 1, str(fouille[idx])]

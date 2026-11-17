@@ -1,8 +1,6 @@
 class_name ShipPanel
 extends HBoxContainer
 
-signal sell_requested(nom: String)
-
 var sheet_label: RichTextLabel
 var hold_label: RichTextLabel
 var hold_list: VBoxContainer
@@ -141,9 +139,10 @@ func set_ship(s: Ship) -> void:
 		var pv := prix_vente_unit(k)
 		var it0: Variant = ShopTables.find_item(str(k))
 		var c0: float = float(cours.get(str(it0.get("dispo", "C")) if it0 != null else "C", 1.0))
+		var q: float = float(s.cargaison[k])
 		var lbl := Label.new()
 		lbl.size_flags_horizontal = SIZE_EXPAND_FILL
-		lbl.text = "%s ×%d — achat de base %s € · %s UC" % [k, s.cargaison[k], MAUtils.fmt_int(prix_base(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
+		lbl.text = "%s ×%s — tonnage : %s (achat de base %s €/u)" % [k, MAUtils.fmt_num(q), ShopTables.tonnage_txt(q, ShopTables.place_de(k)), MAUtils.fmt_int(prix_base(k))]
 		lbl.add_theme_font_size_override("font_size", 12)
 		row.add_child(lbl)
 		var pl := Label.new()
@@ -151,16 +150,7 @@ func set_ship(s: Ship) -> void:
 		pl.add_theme_font_size_override("font_size", 12)
 		pl.add_theme_color_override("font_color", ShopPanel._couleur_prix(c0))
 		row.add_child(pl)
-		var btn := Button.new()
-		btn.text = "Vendre"
-		btn.disabled = not docked or pv <= 0
-		btn.tooltip_text = "Vendre 1 unité (prix de vente = achat ÷ 1,5)" if (docked and pv > 0) else ("Invendable ici (cours ×0)" if docked else "Vente indisponible ici")
-		btn.pressed.connect(_on_sell.bind(k))
-		row.add_child(btn)
 		hold_list.add_child(row)
-
-func _on_sell(nom: String) -> void:
-	sell_requested.emit(nom)
 
 func set_message(t: String) -> void:
 	hold_msg.text = t

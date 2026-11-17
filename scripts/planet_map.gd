@@ -216,14 +216,14 @@ const SITE_NATUREL := "Crique"
 const SITES_RECUP := ["Ruines", "Décharge", "Champ de bataille", "Épave"]
 
 const ARTICLES_FOUILLE := ["Pièces détachées (100 kg)", "Métaux", "Métaux précieux", "Carburant (Radix)", "Armes", "Artefacts technologiques", "Artefacts archéologiques"]
-const FOUILLE_DIFF := {
-	"Pièces détachées (100 kg)": {"Champ de bataille": 2, "Épave": 1, "Décharge": 1, "Ruines": -1},
-	"Métaux": {"Champ de bataille": -1, "Épave": 2, "Décharge": 3, "Ruines": -1},
-	"Métaux précieux": {"Champ de bataille": -1, "Épave": 3, "Décharge": 3, "Ruines": -1},
-	"Carburant (Radix)": {"Champ de bataille": -1, "Épave": 2, "Décharge": 3, "Ruines": -1},
-	"Armes": {"Champ de bataille": 2, "Épave": -1, "Décharge": 3, "Ruines": -1},
-	"Artefacts technologiques": {"Champ de bataille": 3, "Épave": -1, "Décharge": -1, "Ruines": 2},
-	"Artefacts archéologiques": {"Champ de bataille": -1, "Épave": -1, "Décharge": -1, "Ruines": 2},
+const FOUILLE_TABLE := {
+	"Pièces détachées (100 kg)": {"Champ de bataille": [2, 100, "kg"], "Épave": [2, 100, "kg"], "Décharge": [1, 100, "kg"]},
+	"Métaux": {"Épave": [2, 50, "kg"], "Décharge": [1, 50, "kg"]},
+	"Métaux précieux": {"Décharge": [3, 10, "kg"], "Ruines": [3, 10, "kg"]},
+	"Carburant (Radix)": {"Épave": [1, 100, "PC"], "Décharge": [1, 50, "PC"]},
+	"Armes": {"Champ de bataille": [1, 10, "kg"]},
+	"Artefacts technologiques": {"Champ de bataille": [3, 10, "kg"], "Ruines": [2, 10, "kg"]},
+	"Artefacts archéologiques": {"Ruines": [2, 10, "kg"]},
 }
 
 static var _re_pop := RegEx.create_from_string("([0-9][0-9 ]*)")
