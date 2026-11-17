@@ -211,66 +211,74 @@ static func _valider_cotes(pool: Array, envs: Array, cells: Array) -> Array:
 					envs[i] = MAUtils.pick(pool2)
 				modif = true
 	return envs
+const SITES_HABITES := {"Colonie": 100, "Village": 1000, "Astroport": 10000, "Ville": 100000}
+const SITE_NATUREL := "Crique"
+const SITES_RECUP := ["Ruines", "Décharge", "Champ de bataille", "Épave"]
 
-static func _compter_constructions(body: Dictionary) -> Dictionary:
-	var res := {"ville": 0, "colonie": 0, "ruine": 0, "crique": 0}
-	var type: String = str(body.get("type", ""))
-	if type == "géante gazeuse":
-		return res
-	var habitee: bool = bool(body.get("habitee", false))
-	if not habitee:
-		if randf() < 0.5:
-			res["ruine"] = 1 + randi() % 2
-		elif randf() < 0.3:
-			res["ruine"] = 1
-		if type == "station":
-			res["ruine"] = maxi(int(res["ruine"]), 1)
-		if bool(body.get("eau", false)):
-			res["crique"] = 1 + randi() % 2
-		return res
-	var pop: String = str(body.get("population", ""))
-	if pop.contains("vingtaine") or pop.contains("200 habitants") or pop.contains("quelques centaines") or pop.contains("colonie sous dôme"):
-		res["colonie"] = 1 + randi() % 2
-	elif pop.contains("2 000 habitants"):
-		res["ville"] = 1
-		res["colonie"] = 1 + randi() % 2
-	elif pop.contains("20 000 habitants"):
-		res["ville"] = 1 + randi() % 2
-		res["colonie"] = 1 + randi() % 2
-	elif pop.contains("100 000 habitants"):
-		res["ville"] = 2 + randi() % 2
-		res["colonie"] = 1 + randi() % 2
-	elif pop.contains("1 million"):
-		res["ville"] = 2 + randi() % 3
-		res["colonie"] = 1 + randi() % 2
+static var _re_pop := RegEx.create_from_string("([0-9][0-9 ]*)")
+
+static func parse_population(txt: String) -> int:
+	var t := txt.to_lower()
+	if t.contains("aucune") or t == "":
+		return 0
+	if t.contains("vingtaine"):
+		return 20
+	if t.contains("centaines"):
+		return 300
+	var m := _re_pop.search(t)
+	if m == null:
+		return 0
+	var n := int(m.get_string(1).replace(" ", ""))
+	if t.contains("milliard"):
+		return n * 1000000000
+	if t.contains("million"):
+		return n * 1000000
+	return n
+
+static func pop_txt(pop: int) -> String:
+	if pop <= 0:
+		return "aucune population"
+	if pop >= 1000000000:
+		return "%s milliards d'habitants" % MAUtils.fmt_int(pop / 1000000000.0)
+	if pop >= 1000000:
+		return "%s millions d'habitants" % MAUtils.fmt_int(pop / 1000000.0)
+	return "%s habitants" % MAUtils.fmt_int(pop)
+
+static func sites_habites(pop: int) -> Array:
+	var out: Array = []
+	if pop <= 0:
+		return out
+	if pop <= 100:
+		out.append("Colonie")
+	elif pop <= 1000:
+		out.append("Village")
+	elif pop <= 10000:
+		out.append("Astroport")
+	elif pop <= 100000:
+		out.append("Ville")
 	else:
-		res["ville"] = 3 + randi() % 4
-		res["colonie"] = 1 + randi() % 3
-	if randf() < 0.2:
-		res["ruine"] = 1
-	if bool(body.get("eau", false)):
-		res["crique"] = 1 + randi() % 3
-	else:
-		res["crique"] = randi() % 2
-	return res
+		var n := int(ceil(pop / 100000.0))
+		for i in n:
+			out.append("Ville")
+	return out
 
 static func _prendre(libres: Array) -> int:
 	var k := randi() % libres.size()
 	return libres.pop_at(k)
 
-static func _placer(constr: Dictionary, libres: Array, cells: Array, envs: Array, type: String, prefer_cotes: bool, classe_m: bool) -> void:
+static func _placer_site(sites: Dictionary, libres: Array, cells: Array, envs: Array, type: String, prefer_cotes: bool) -> void:
 	if libres.is_empty():
 		return
 	var idx := -1
-	if prefer_cotes and classe_m:
+	if prefer_cotes:
 		var cand: Array = []
 		for i in libres:
 			if envs[i] == "Côtes":
 				cand.append(i)
 		if not cand.is_empty():
 			idx = cand[randi() % cand.size()]
-	if idx < 0 and not constr.is_empty() and classe_m and randf() < 0.6:
-		var occupees: Array = constr.keys()
+	if idx < 0 and not sites.is_empty() and randf() < 0.6:
+		var occupees: Array = sites.keys()
 		for essai in range(6):
 			if idx >= 0:
 				break
@@ -285,28 +293,61 @@ static func _placer(constr: Dictionary, libres: Array, cells: Array, envs: Array
 		idx = _prendre(libres)
 	else:
 		libres.erase(idx)
-	constr[idx] = type
+	sites[idx] = type
 
-static func _gen_constructions(body: Dictionary, envs: Array, cells: Array, classe_m: bool) -> Dictionary:
-	var constr := {}
+static func _gen_sites(body: Dictionary, type: String, cells: Array, envs: Array) -> Dictionary:
+	var sites := {}
+	if type == "géante gazeuse":
+		return sites
 	var libres: Array = []
 	for i in envs.size():
 		if envs[i] != "Océans":
 			libres.append(i)
-	var type: String = str(body.get("type", ""))
+	var pop := parse_population(str(body.get("population", "")))
+	var pop0 := pop
+	var habitee: bool = bool(body.get("habitee", false))
 	var ap: String = str(body.get("astroport", ""))
-	if type != "géante gazeuse" and ap != "" and not ap.begins_with("aucun") and not libres.is_empty():
-		constr[_prendre(libres)] = "Astroport"
-	var cible := _compter_constructions(body)
-	for i in range(int(cible["ville"])):
-		_placer(constr, libres, cells, envs, "Ville", false, classe_m)
-	for i in range(int(cible["colonie"])):
-		_placer(constr, libres, cells, envs, "Colonie", false, classe_m)
-	for i in range(int(cible["ruine"])):
-		_placer(constr, libres, cells, envs, "Ruines", false, classe_m)
-	for i in range(int(cible["crique"])):
-		_placer(constr, libres, cells, envs, "Crique", true, classe_m)
-	return constr
+	var a_astro := ap != "" and not ap.begins_with("aucun")
+	if habitee and pop > 0:
+		var hab := sites_habites(pop)
+		if a_astro and not hab.has("Astroport"):
+			hab.append("Astroport")
+		while hab.size() > libres.size() and pop > 100:
+			pop = int(pop / 2)
+			hab = sites_habites(pop)
+			if a_astro and not hab.has("Astroport"):
+				hab.append("Astroport")
+		if hab.size() > libres.size():
+			pop = 0
+			hab = []
+		if pop != pop0:
+			body["population"] = pop_txt(pop)
+			if pop == 0:
+				body["habitee"] = false
+		for t in hab:
+			_placer_site(sites, libres, cells, envs, t, false)
+	if bool(body.get("eau", false)):
+		var nb_c := 1 + randi() % 3
+		for i in nb_c:
+			_placer_site(sites, libres, cells, envs, "Crique", true)
+	var techno: String = str(body.get("niveau_techno", ""))
+	var cours := StarSystem.parse_cours(str(body.get("cours", "")))
+	var desc: String = str(body.get("description", "")).to_lower()
+	var nb_ruines := 0
+	if techno != "" and techno != "-" and techno != "aucun":
+		nb_ruines = 1 + randi() % 2
+	elif not habitee:
+		nb_ruines = randi() % 2
+	for i in nb_ruines:
+		_placer_site(sites, libres, cells, envs, "Ruines", false)
+	if float(cours.get("B", 0.0)) > 0.0:
+		for i in 1 + randi() % 2:
+			_placer_site(sites, libres, cells, envs, "Décharge", false)
+	if (habitee and randf() < 0.3) or desc.contains("guerre") or desc.contains("bataille"):
+		_placer_site(sites, libres, cells, envs, "Champ de bataille", false)
+	if randf() < (0.4 if not habitee else 0.2):
+		_placer_site(sites, libres, cells, envs, "Épave", false)
+	return sites
 
 static func rayon_equivalent(n: int) -> int:
 	return maxi(1, int(ceil((3.0 + sqrt(maxf(0.0, 12.0 * n - 3.0))) / 6.0)))
@@ -340,5 +381,5 @@ static func generer(body: Dictionary, graine: int) -> Dictionary:
 			taille = 64.0
 	var cells := hex_grille(n, coord)
 	var envs := _gen_envs(body, type, cells)
-	var constr := _gen_constructions(body, envs, cells, type == "planète")
-	return {"nom": str(body.get("nom", "?")), "classe": type, "coord": coord, "taille": taille / 2.0, "rayon": rayon, "cases": n, "cells": cells, "envs": envs, "constr": constr}
+	var sites := _gen_sites(body, type, cells, envs)
+	return {"nom": str(body.get("nom", "?")), "classe": type, "coord": coord, "taille": taille / 2.0, "rayon": rayon, "cases": n, "cells": cells, "envs": envs, "sites": sites}

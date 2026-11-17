@@ -1,6 +1,9 @@
 class_name ExplorePanel
 extends VBoxContainer
 
+signal recup_requested(site: String, trouvaille: String, recharge: String)
+signal remettre_requested(produit: String)
+
 class MapCanvas extends Control:
 	var panel: ExplorePanel
 	func _gui_input(event: InputEvent) -> void:
@@ -15,6 +18,13 @@ var msg_label: Label
 var canvas: MapCanvas
 var legend_label: Label
 var info_label: Label
+var site_opt: OptionButton
+var trouv_opt: OptionButton
+var recharge_opt: OptionButton
+var btn_recup: Button
+var remise_opt: OptionButton
+var btn_remettre: Button
+var recup_label: Label
 var map := {}
 var selected := -1
 var centres: Array = []
@@ -50,8 +60,88 @@ func _ready() -> void:
 	info_label.add_theme_font_size_override("font_size", 12)
 	info_label.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 	add_child(info_label)
+	var sep := HSeparator.new()
+	add_child(sep)
+	var sh := Label.new()
+	sh.text = "Récupération (La Guerre et la Désolation, p. 14-17) — sites de récupération du corps"
+	sh.add_theme_font_size_override("font_size", 13)
+	sh.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
+	add_child(sh)
+	var hb1 := HBoxContainer.new()
+	hb1.add_theme_constant_override("separation", 8)
+	add_child(hb1)
+	site_opt = OptionButton.new()
+	site_opt.add_item("Aucun site de récupération sur ce corps")
+	site_opt.size_flags_horizontal = SIZE_EXPAND_FILL
+	hb1.add_child(site_opt)
+	trouv_opt = OptionButton.new()
+	for t in SalvageTables.TROUVAILLES:
+		trouv_opt.add_item(t)
+	trouv_opt.size_flags_horizontal = SIZE_EXPAND_FILL
+	hb1.add_child(trouv_opt)
+	recharge_opt = OptionButton.new()
+	for r in SalvageTables.RECHARGES_LBL:
+		recharge_opt.add_item(r)
+	hb1.add_child(recharge_opt)
+	btn_recup = Button.new()
+	btn_recup.text = "Récoup ! (1 jour)"
+	btn_recup.tooltip_text = "Action « Récoup ! » : test de Recherche, difficulté 1 + modificateur du site/trouvaille"
+	btn_recup.pressed.connect(_on_recup_pressed)
+	hb1.add_child(btn_recup)
+	var hb2 := HBoxContainer.new()
+	hb2.add_theme_constant_override("separation", 8)
+	add_child(hb2)
+	remise_opt = OptionButton.new()
+	for p in SalvageTables.PRODUITS.keys():
+		remise_opt.add_item(p)
+	remise_opt.size_flags_horizontal = SIZE_EXPAND_FILL
+	hb2.add_child(remise_opt)
+	btn_remettre = Button.new()
+	btn_remettre.text = "Remettre à neuf (1 jour)"
+	btn_remettre.tooltip_text = "Action « Remettre à neuf » : test d'Ingénierie (vaisseau/véhicule) ou de Technologie — les composants ne sont consommés qu'en cas de succès"
+	btn_remettre.pressed.connect(_on_remettre_pressed)
+	hb2.add_child(btn_remettre)
+	recup_label = Label.new()
+	recup_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	recup_label.add_theme_font_size_override("font_size", 11)
+	recup_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	add_child(recup_label)
 
-func set_body(body: Variant, graine: int) -> void:
+func _on_recup_pressed() -> void:
+	var site: String = site_opt.get_item_text(site_opt.selected).replace(" (E)", "")
+	var recharge: String = SalvageTables.RECHARGES[recharge_opt.selected] if recharge_opt.selected >= 0 else "blaster"
+	recup_requested.emit(site, trouv_opt.get_item_text(trouv_opt.selected), recharge)
+
+func _on_remettre_pressed() -> void:
+	remettre_requested.emit(remise_opt.get_item_text(remise_opt.selected))
+
+static func _recup_txt(recup: Dictionary) -> String:
+	var rec: Dictionary = recup.get("recharges", {})
+	var parts: Array = []
+	parts.append("élec %d kg" % int(recup.get("comp_elec", 0)))
+	parts.append("indus %d kg" % int(recup.get("comp_indus", 0)))
+	parts.append("spatiaux %d kg" % int(recup.get("comp_spatial", 0)))
+	parts.append("minerai %d kg" % int(recup.get("minerai", 0)))
+	parts.append("épave vaisseau ×%d (%d syst. ok)" % [int(recup.get("epave_vaisseau", 0)), int(recup.get("epave_sys", 0))])
+	parts.append("épave véhicule ×%d" % int(recup.get("epave_vehicule", 0)))
+	var rparts: Array = []
+	for k in rec.keys():
+		rparts.append("%s ×%d" % [k, int(rec[k])])
+	if not rparts.is_empty():
+		parts.append("recharges : " + ", ".join(rparts))
+	return "Stock de récupération — composants : " + " · ".join(parts)
+
+func refresh_salvage(sites: Array, recup: Dictionary, has_scaphandre: bool) -> void:
+	site_opt.clear()
+	if sites.is_empty():
+		site_opt.add_item("Aucun site de récupération sur ce corps")
+	else:
+		for s in sites:
+			site_opt.add_item(s + (" (E)" if SalvageTables.est_site_espace(s) else ""))
+	btn_recup.disabled = sites.is_empty()
+	recup_label.text = _recup_txt(recup)
+
+func set_body(body: Variant, graine: int, recup := {}, has_scaphandre := false) -> void:
 	selected = -1
 	if body == null:
 		map = {}
@@ -72,7 +162,8 @@ func set_body(body: Variant, graine: int) -> void:
 	title_label.text = "Explorer — %s (%s, %s · coordonnées %s)" % [str(map["nom"]), str(map["classe"]), taille_txt, coord_lbl]
 	msg_label.text = ""
 	_legend()
-	info_label.text = "Cliquez sur une case hexagonale pour afficher ses caractéristiques (coordonnées, environnement, construction)."
+	info_label.text = "Cliquez sur une case hexagonale pour afficher ses caractéristiques (coordonnées, environnement, site)."
+	refresh_salvage(SalvageTables.sites_du_corps(b), recup, has_scaphandre)
 	canvas.queue_redraw()
 
 func _legend() -> void:
@@ -84,7 +175,7 @@ func _legend() -> void:
 	for l in counts.keys():
 		parts.append("%s (%d)" % [l, int(counts[l])])
 	var ccounts := {}
-	for v in map["constr"].values():
+	for v in map["sites"].values():
 		ccounts[str(v)] = int(ccounts.get(str(v), 0)) + 1
 	for k in ccounts.keys():
 		parts.append("%s ×%d" % [k, int(ccounts[k])])
@@ -131,7 +222,7 @@ func _draw_map(cv: Control) -> void:
 		return
 	var sq := sqrt(3.0) / 2.0
 	var envs: Array = map["envs"]
-	var constr: Dictionary = map["constr"]
+	var sites: Dictionary = map["sites"]
 	for i in centres.size():
 		var p: Vector2 = centres[i]
 		var col: Color = PlanetMap.couleur_case(str(envs[i]))
@@ -147,8 +238,8 @@ func _draw_map(cv: Control) -> void:
 		cv.draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2], pts[3], pts[4], pts[5], pts[0]]), Color(0.04, 0.05, 0.1), 1.5)
 		if i == selected:
 			cv.draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2], pts[3], pts[4], pts[5], pts[0]]), Color(1.0, 0.85, 0.3), 2.5)
-		if constr.has(i):
-			_draw_glyph(cv, str(constr[i]), p, s * zoom * 0.45)
+		if sites.has(i):
+			_draw_glyph(cv, str(sites[i]), p, s * zoom * 0.45)
 
 func _draw_glyph(cv: Control, t: String, p: Vector2, g: float) -> void:
 	var w := Color(1, 1, 1)
@@ -158,13 +249,23 @@ func _draw_glyph(cv: Control, t: String, p: Vector2, g: float) -> void:
 			cv.draw_circle(p, g * 0.2, w)
 		"Ville":
 			cv.draw_rect(Rect2(p - Vector2(g * 0.8, g * 0.8), Vector2(g * 1.6, g * 1.6)), w)
+		"Village":
+			cv.draw_rect(Rect2(p - Vector2(g * 0.55, g * 0.55), Vector2(g * 1.1, g * 1.1)), w)
 		"Colonie":
 			cv.draw_rect(Rect2(p - Vector2(g * 0.8, g * 0.8), Vector2(g * 1.6, g * 1.6)), w, false, 1.5)
+		"Crique":
+			cv.draw_circle(p, g * 0.5, Color(0.75, 0.9, 1.0))
 		"Ruines":
 			cv.draw_line(p + Vector2(-g * 0.85, -g * 0.85), p + Vector2(g * 0.85, g * 0.85), w, 1.5)
 			cv.draw_line(p + Vector2(-g * 0.85, g * 0.85), p + Vector2(g * 0.85, -g * 0.85), w, 1.5)
-		"Crique":
-			cv.draw_circle(p, g * 0.5, Color(0.75, 0.9, 1.0))
+		"Décharge":
+			cv.draw_polyline(PackedVector2Array([p + Vector2(-g, -g * 0.6), p + Vector2(g, -g * 0.6), p + Vector2(0, g)]), w, 1.5)
+		"Champ de bataille":
+			cv.draw_line(p + Vector2(-g * 0.7, -g * 0.7), p + Vector2(g * 0.7, g * 0.7), w, 2.0)
+			cv.draw_line(p + Vector2(-g * 0.7, g * 0.7), p + Vector2(g * 0.7, -g * 0.7), w, 2.0)
+		"Épave":
+			cv.draw_arc(p, g * 0.7, 0, TAU, 16, w, 1.5)
+			cv.draw_line(p + Vector2(-g * 0.4, g * 0.1), p + Vector2(g * 0.4, g * 0.1), w, 1.5)
 
 func _on_canvas_click(pos: Vector2) -> void:
 	if map.is_empty():
@@ -185,11 +286,11 @@ func select_cell(i: int) -> void:
 	selected = i
 	var coord := PlanetMap.coord_case(map, i)
 	var env := PlanetMap.libelle_env(str(map["envs"][i]))
-	var constr: String = str(map["constr"].get(i, ""))
+	var site: String = str(map["sites"].get(i, ""))
 	var txt := "Case %d · coordonnées %s · environnement : %s" % [i + 1, coord, env]
-	if constr != "":
-		txt += " · construction : %s" % constr
+	if site != "":
+		txt += " · site : %s" % site
 	else:
-		txt += " · aucune construction"
+		txt += " · aucun site"
 	info_label.text = txt
 	canvas.queue_redraw()

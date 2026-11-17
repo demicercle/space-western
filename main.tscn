@@ -53,30 +53,31 @@ visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=1352252322]
+[node name="TabExplorer" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 2
 
-[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=954161746]
+[node name="TabEquipage" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=1352252322]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 3
 
-[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=480138062]
+[node name="TabVaisseau" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=954161746]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 4
 
-[node name="TabRecruter" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=374396623]
+[node name="TabCommerce" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=480138062]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 5
 
-[node name="TabExplorer" type="Control" parent="HSplit/RightVBox/TopBar/Tabs"]
+[node name="TabRecruter" type="Control" parent="HSplit/RightVBox/TopBar/Tabs" unique_id=374396623]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 6
+
 
 [node name="PauseButton" type="Button" parent="." unique_id=1340052009]
 unique_name_in_owner = true
