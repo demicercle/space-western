@@ -40,6 +40,17 @@ static func _desc_txt(it: Dictionary) -> String:
 		return meta
 	return d + " — " + meta
 
+static func _couleur_prix(c: float) -> Color:
+	if c <= 0.0:
+		return Color(0.6, 0.6, 0.65)
+	if c <= 0.5:
+		return Color(0.45, 0.95, 0.5)
+	if c >= 2.0:
+		return Color(1.0, 0.4, 0.35)
+	if c >= 1.5:
+		return Color(1.0, 0.7, 0.25)
+	return Color(0.86, 0.89, 0.96)
+
 static func _tab_of(cat: String) -> int:
 	if cat == "Militaire":
 		return 2
@@ -160,15 +171,18 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		if q <= 0:
 			continue
 		var nl := Label.new()
-		nl.text = "%s ×%d" % [str(k), q]
+		nl.text = "%s ×%d" % [ShopTables.nom_affiche(str(k)), q]
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size = Vector2(120, 0)
 		nl.add_theme_font_size_override("font_size", 12)
 		soute_grid.add_child(nl)
 		var pv := ShopTables.prix_vente(str(k), cours)
+		var it0: Variant = ShopTables.find_item(str(k))
+		var c0: float = float(cours.get(str(it0.get("dispo", "C")) if it0 != null else "C", 1.0))
 		var pl := Label.new()
 		pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv))
 		pl.add_theme_font_size_override("font_size", 12)
+		pl.add_theme_color_override("font_color", _couleur_prix(c0))
 		soute_grid.add_child(pl)
 		var btn := Button.new()
 		btn.text = "Vendre"
@@ -183,8 +197,9 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	for it in items:
 		var grid: GridContainer = grids[_tab_of(str(it.get("cat", "")))]
 		var nom: String = str(it["nom"])
+		var lot: int = ShopTables.lot_de(it)
 		var nom_l := Label.new()
-		nom_l.text = nom
+		nom_l.text = ShopTables.nom_affiche(nom)
 		nom_l.custom_minimum_size = Vector2(230, 0)
 		nom_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nom_l.add_theme_font_size_override("font_size", 12)
@@ -200,11 +215,14 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		cell.add_theme_constant_override("separation", 8)
 		cell.custom_minimum_size = Vector2(190, 0)
 		var prix := ShopTables.prix_achat(it, cours)
+		var prix_tot := prix * lot
+		var c: float = float(cours.get(str(it.get("dispo", "C")), 1.0))
 		var prix_l := Label.new()
-		prix_l.text = ("—" if prix < 0 else "%s €" % MAUtils.fmt_int(prix))
+		prix_l.text = ("—" if prix < 0 else "%s €" % MAUtils.fmt_int(prix_tot))
 		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
 		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		prix_l.add_theme_font_size_override("font_size", 12)
+		prix_l.add_theme_color_override("font_color", _couleur_prix(c))
 		cell.add_child(prix_l)
 		if soute.has(nom) and int(soute[nom]) > 0:
 			var own := Label.new()
@@ -214,8 +232,8 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 			cell.add_child(own)
 		var btn := Button.new()
 		btn.text = "Acheter"
-		var trop_cher := prix >= 0 and credits < prix
-		var plus_de_place := soute_used + float(it["place"]) > soute_max + 0.0001
+		var trop_cher := prix_tot >= 0 and credits < prix_tot
+		var plus_de_place := soute_used + float(it["place"]) * lot > soute_max + 0.0001
 		btn.disabled = not docked or prix < 0 or trop_cher or plus_de_place
 		if prix < 0:
 			btn.tooltip_text = "Achat impossible ici (cours ×0 pour la catégorie %s)" % str(it.get("dispo", "?"))

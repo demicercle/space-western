@@ -22,7 +22,7 @@ const CATALOGUE := [
 	{"nom": "Module-mémoire", "prix": 1000, "dispo": "A", "cat": "Courant", "note": "5 coordonnées de saut ; stockage de données.", "place": 0.01},
 	{"nom": "Navordinateur de poche", "prix": 750, "dispo": "A", "cat": "Courant", "note": "(sc) en Navigation à la surface des planètes.", "place": 0.2},
 	{"nom": "Pièces détachées (1 kg)", "prix": 2, "dispo": "B", "cat": "Courant", "note": "Réparer un vaisseau, véhicule ou objet (1 kg consommé par réparation).", "place": 0.01},
-	{"nom": "Ration", "prix": 1, "dispo": "C", "cat": "Courant", "note": "Nourriture pour une journée (1 ration/personne/jour de voyage).", "place": 0.01},
+	{"nom": "Ration", "prix": 1, "dispo": "C", "cat": "Courant", "lot": 10, "note": "Lot de 10 rations (1 ration/personne/jour de voyage).", "place": 0.01},
 	{"nom": "Repas", "prix": 25, "dispo": "B", "cat": "Courant", "note": "Un bon repas.", "place": 0.01},
 	{"nom": "Respirateur", "prix": 10, "dispo": "B", "cat": "Courant", "note": "(SC) contre gaz et atmosphères nocives ; ~50 h.", "place": 0.1},
 	{"nom": "Sac à dos", "prix": 1, "dispo": "C", "cat": "Courant", "note": "Emporte 10 kg.", "place": 0.05},
@@ -104,7 +104,7 @@ const STATION_RELAIS := [
 	{"nom": "Eau (1 L)", "prix": 2, "dispo": "C", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.001},
 	{"nom": "Instruments d'électronique", "prix": 500, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 1.0},
 	{"nom": "Pièces détachées (1 kg)", "prix": 5, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG, au kg.", "place": 0.01},
-	{"nom": "Ration", "prix": 2, "dispo": "C", "cat": "Station-relais", "note": "Comptoir OCG (0,5 kg).", "place": 0.01},
+	{"nom": "Ration", "prix": 2, "dispo": "C", "cat": "Station-relais", "lot": 10, "note": "Comptoir OCG — lot de 10 (0,5 kg).", "place": 0.01},
 	{"nom": "Repas", "prix": 2, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.01},
 	{"nom": "Scaphandre", "prix": 1000, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 1.0},
 ]
@@ -159,6 +159,27 @@ static func prix_achat(it: Dictionary, cours: Dictionary) -> int:
 
 static func est_illegal(it: Dictionary) -> bool:
 	return bool(it.get("illegal", false))
+
+static func find_item(nom: String) -> Variant:
+	var it: Variant = find_catalogue(nom)
+	if it == null:
+		it = find_marchandise(nom)
+	if it == null:
+		it = find_in(STATION_RELAIS, nom)
+	return it
+
+static func lot_de(it: Dictionary) -> int:
+	return maxi(1, int(it.get("lot", 1)))
+
+static func nom_affiche(nom: String) -> String:
+	var it: Variant = find_item(nom)
+	var lot := 1
+	if it != null:
+		lot = lot_de(it)
+	if lot > 1:
+		var base := "Rations" if nom == "Ration" else nom + "s"
+		return "%s (%d)" % [base, lot]
+	return nom
 
 static func prix_vente(nom: String, cours: Dictionary) -> int:
 	var it: Variant = find_catalogue(nom)

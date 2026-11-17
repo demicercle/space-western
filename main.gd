@@ -594,8 +594,9 @@ func radix_unit_price() -> float:
 	return ship.tonnage * (1.5 if current_system != null and current_system.est_relais else 0.75)
 
 func _on_buy(it: Dictionary) -> void:
-	var prix := ShopTables.prix_achat(it, cours_actuel())
-	var place: float = float(it["place"])
+	var lot: int = ShopTables.lot_de(it)
+	var prix := ShopTables.prix_achat(it, cours_actuel()) * lot
+	var place: float = float(it["place"]) * lot
 	if not peut_commercer():
 		shop_panel.set_message("Commerce indisponible ici : pas d'astroport sur ce corps (même rudimentaire) ou cours ×0.")
 		return
@@ -603,16 +604,16 @@ func _on_buy(it: Dictionary) -> void:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), str(it["nom"])])
 		return
 	if credits < prix:
-		shop_panel.set_message("Crédits insuffisants pour %s (%s €)." % [it["nom"], MAUtils.fmt_int(prix)])
+		shop_panel.set_message("Crédits insuffisants pour %s (%s €)." % [ShopTables.nom_affiche(str(it["nom"])), MAUtils.fmt_int(prix)])
 		return
 	if soute_used() + place > ship.soute + 0.0001:
 		shop_panel.set_message("Plus de place en soute pour %s." % it["nom"])
 		return
 	credits -= prix
-	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + 1
+	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + lot
 	if it["nom"] == "Ration":
 		ship.rations = int(ship.cargaison["Ration"])
-	shop_panel.set_message("Acheté : %s pour %s € (%d en soute)." % [it["nom"], MAUtils.fmt_int(prix), int(ship.cargaison[it["nom"]])])
+	shop_panel.set_message("Acheté : %s pour %s € (%d en soute)." % [ShopTables.nom_affiche(str(it["nom"])), MAUtils.fmt_int(prix), int(ship.cargaison[it["nom"]])])
 	refresh_all()
 
 func _on_sell(nom: String) -> void:
