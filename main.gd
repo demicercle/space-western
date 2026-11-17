@@ -607,7 +607,7 @@ func _on_buy(it: Dictionary) -> void:
 	var prix := ShopTables.prix_achat(it, cours_actuel()) * lot
 	var place: float = float(it["place"]) * lot
 	if not peut_commercer():
-		shop_panel.set_message("Commerce indisponible ici : pas d'astroport sur ce corps (même rudimentaire) ou cours ×0.")
+		shop_panel.set_message("Commerce indisponible ici : %s." % raison_commerce())
 		return
 	if prix < 0:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), str(it["nom"])])
@@ -627,7 +627,7 @@ func _on_buy(it: Dictionary) -> void:
 
 func _on_sell(nom: String) -> void:
 	if not peut_commercer():
-		ship_panel.set_message("Vente indisponible ici : pas d'astroport sur ce corps (même rudimentaire) ou cours ×0.")
+		ship_panel.set_message("Vente indisponible ici : %s." % raison_commerce())
 		return
 	if not ship.cargaison.has(nom) or int(ship.cargaison[nom]) <= 0:
 		return
@@ -652,23 +652,38 @@ func a_astroport() -> bool:
 	var ap: String = str(ship_body.get("astroport", ""))
 	return ap != "" and not ap.begins_with("aucun")
 
-func peut_commercer() -> bool:
-	if not docked() or not a_astroport():
+func station_orbitale_habitee() -> bool:
+	if current_system == null:
 		return false
-	var c := cours_actuel()
-	return float(c["A"]) > 0.0 or float(c["B"]) > 0.0 or float(c["C"]) > 0.0
+	for c in current_system.corps:
+		if str(c.get("type", "")) == "station" and bool(c.get("habitee", false)):
+			return true
+	return false
 
 func raison_commerce() -> String:
-	if not docked():
-		if ship_body == null:
-			return "le vaisseau n'est pas en orbite autour d'un corps céleste (planète ou station)"
-		return "on ne peut pas s'amarrer sur un corps de type « %s »" % str(ship_body.get("type", "?"))
-	if not a_astroport():
-		return "ce corps ne possède pas d'astroport (même rudimentaire)"
+	if current_system == null or ship_body == null:
+		return "le vaisseau n'est pas en orbite autour d'un corps céleste"
+	var sc: Variant = ship_body.get("scan", null)
+	if sc == null or not bool(sc.get("ok", false)):
+		return "le corps n'a pas été scanné (bouton « Scanner (1 h) » dans la carte de système)"
+	var t: String = str(ship_body.get("type", ""))
+	var amarrable := t == "planète" or t == "station"
+	var ok_astro := false
+	if amarrable:
+		ok_astro = a_astroport()
+	else:
+		ok_astro = station_orbitale_habitee()
+	if not amarrable and not ok_astro:
+		return "on ne peut pas s'amarrer sur un corps de type « %s » et aucune station orbitale habitée dans le système" % t
+	if amarrable and not ok_astro:
+		return "ce corps ne possède ni astroport (même rudimentaire) ni station orbitale"
 	var c := cours_actuel()
 	if float(c["A"]) <= 0.0 and float(c["B"]) <= 0.0 and float(c["C"]) <= 0.0:
 		return "aucun cours des marchandises n'est indiqué sur ce corps (A/B/C à ×0)"
 	return ""
+
+func peut_commercer() -> bool:
+	return raison_commerce() == ""
 
 func peut_recruter() -> bool:
 	if not docked() or not a_astroport():
@@ -740,7 +755,7 @@ func _on_scanner() -> void:
 	refresh_all()
 func _on_rechercher() -> void:
 	if not peut_commercer():
-		shop_panel.set_message("Recherche impossible : pas d'astroport sur ce corps (même rudimentaire) ou cours A/B/C tous à ×0.")
+		shop_panel.set_message("Recherche impossible : %s." % raison_commerce())
 		return
 	if current_system != null and current_system.est_relais:
 		shop_panel.set_message("Comptoir OCG de la station-relais : tarifs fixes, pas besoin de chercher.")
