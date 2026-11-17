@@ -139,11 +139,18 @@ func set_ship(s: Ship) -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		var pv := prix_vente_unit(k)
+		var it0: Variant = ShopTables.find_item(str(k))
+		var c0: float = float(cours.get(str(it0.get("dispo", "C")) if it0 != null else "C", 1.0))
 		var lbl := Label.new()
 		lbl.size_flags_horizontal = SIZE_EXPAND_FILL
-		lbl.text = "%s ×%d — vente : %s (achat de base %s €, %s UC)" % [k, s.cargaison[k], ("invendable ici (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv)), MAUtils.fmt_int(prix_base(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
+		lbl.text = "%s ×%d — achat de base %s € · %s UC" % [k, s.cargaison[k], MAUtils.fmt_int(prix_base(k)), MAUtils.fmt_num(ShopTables.place_de(k))]
 		lbl.add_theme_font_size_override("font_size", 12)
 		row.add_child(lbl)
+		var pl := Label.new()
+		pl.text = ("vente : invendable (cours ×0)" if pv <= 0 else "vente : %s €/u" % MAUtils.fmt_int(pv))
+		pl.add_theme_font_size_override("font_size", 12)
+		pl.add_theme_color_override("font_color", ShopPanel._couleur_prix(c0))
+		row.add_child(pl)
 		var btn := Button.new()
 		btn.text = "Vendre"
 		btn.disabled = not docked or pv <= 0

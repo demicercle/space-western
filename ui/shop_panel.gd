@@ -123,7 +123,7 @@ func _ready() -> void:
 		sc.set_anchors_preset(Control.PRESET_FULL_RECT)
 		tab.add_child(sc)
 		var grid := GridContainer.new()
-		grid.columns = 3
+		grid.columns = 4
 		grid.add_theme_constant_override("h_separation", 14)
 		grid.add_theme_constant_override("v_separation", 5)
 		grid.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -194,6 +194,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		grid.add_child(_header_cell("Objet"))
 		grid.add_child(_header_cell("Description"))
 		grid.add_child(_header_cell("Prix"))
+		grid.add_child(_header_cell("en soute"))
 	for it in items:
 		var grid: GridContainer = grids[_tab_of(str(it.get("cat", "")))]
 		var nom: String = str(it["nom"])
@@ -224,12 +225,6 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		prix_l.add_theme_font_size_override("font_size", 12)
 		prix_l.add_theme_color_override("font_color", _couleur_prix(c))
 		cell.add_child(prix_l)
-		if soute.has(nom) and int(soute[nom]) > 0:
-			var own := Label.new()
-			own.text = "en soute ×%d" % int(soute[nom])
-			own.add_theme_font_size_override("font_size", 11)
-			own.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
-			cell.add_child(own)
 		var btn := Button.new()
 		btn.text = "Acheter"
 		var trop_cher := prix_tot >= 0 and credits < prix_tot
@@ -244,6 +239,12 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		btn.pressed.connect(_on_buy.bind(it))
 		cell.add_child(btn)
 		grid.add_child(cell)
+		var own := Label.new()
+		if soute.has(nom) and int(soute[nom]) > 0:
+			own.text = "%d" % int(soute[nom])
+		own.add_theme_font_size_override("font_size", 12)
+		own.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
+		grid.add_child(own)
 	var counts := [0, 0, 0, 0, 0]
 	for it in items:
 		counts[_tab_of(str(it.get("cat", "")))] += 1
