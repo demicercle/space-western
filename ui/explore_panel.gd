@@ -19,6 +19,7 @@ var canvas: MapCanvas
 var legend_label: Label
 var info_label: Label
 var btn_fouiller: Button
+var fouille_label: Label
 var map := {}
 var selected := -1
 var centres: Array = []
@@ -60,6 +61,14 @@ func _ready() -> void:
 	btn_fouiller.tooltip_text = "Action « Fouiller » : 1 jour, un test de Recherche par article du tableau selon le type de site"
 	btn_fouiller.pressed.connect(_on_fouiller_pressed)
 	add_child(btn_fouiller)
+	fouille_label = Label.new()
+	fouille_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	fouille_label.add_theme_font_size_override("font_size", 12)
+	fouille_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.7))
+	add_child(fouille_label)
+
+func set_fouille_result(txt: String) -> void:
+	fouille_label.text = txt
 
 func _on_fouiller_pressed() -> void:
 	fouiller_requested.emit()
@@ -67,18 +76,20 @@ func _on_fouiller_pressed() -> void:
 func set_body(body: Variant, graine: int) -> void:
 	selected = -1
 	btn_fouiller.visible = false
+	fouille_label.text = ""
 	if body == null:
 		map = {}
 		title_label.text = "Explorer"
-		msg_label.text = "Explorer indisponible : le vaisseau doit être en orbite autour d'un corps stellaire scanné avec succès (bouton « Scanner ce corps (1 h) » dans la carte de système)."
+		msg_label.text = ""
 		legend_label.text = ""
-		info_label.text = "Cliquez sur une case hexagonale pour afficher ses caractéristiques."
+		info_label.text = ""
 		canvas.queue_redraw()
 		return
 	var b: Dictionary = body
 	if not b.has("planet_map"):
 		b["planet_map"] = PlanetMap.generer(b, graine)
 	map = b["planet_map"]
+	fouille_label.text = str(map.get("fouille_result", ""))
 	var coord_lbl := "cubic (q, r, s)" if str(map["coord"]) == "cubic" else "axial (q, r)"
 	var taille_txt := "%d cases" % map["cells"].size()
 	if int(map.get("rayon", 0)) > 0:
@@ -170,6 +181,9 @@ func _draw_glyph(cv: Control, t: String, p: Vector2, g: float) -> void:
 		"Astroport":
 			cv.draw_polyline(PackedVector2Array([p + Vector2(0, -g), p + Vector2(g, g * 0.75), p + Vector2(-g, g * 0.75), p + Vector2(0, -g)]), w, 1.5)
 			cv.draw_circle(p, g * 0.2, w)
+		"Mégalopole":
+			cv.draw_rect(Rect2(p - Vector2(g, g), Vector2(g * 2.0, g * 2.0)), w)
+			cv.draw_rect(Rect2(p - Vector2(g * 0.4, g * 0.4), Vector2(g * 0.8, g * 0.8)), Color(0.12, 0.12, 0.18))
 		"Ville":
 			cv.draw_rect(Rect2(p - Vector2(g * 0.8, g * 0.8), Vector2(g * 1.6, g * 1.6)), w)
 		"Village":

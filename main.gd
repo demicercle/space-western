@@ -553,7 +553,9 @@ func _start_game() -> void:
 		ship_orbite_us = float(ship_body["orbite"])
 		ship_angle = current_system.angle_corps(ship_body)
 	if ship_body != null and current_pos == GalaxyData.EXXALIA:
-		ship_body["scan"] = {"ok": true, "astroport": true, "infos": ["astroport"]}
+		var infos_ex := SCAN_EXTRA.duplicate()
+		infos_ex.append("astroport")
+		ship_body["scan"] = {"ok": true, "astroport": true, "infos": infos_ex}
 	refresh_all()
 	if ship_body != null:
 		system_map.select_body(ship_body)
@@ -1123,9 +1125,11 @@ func _on_fouiller() -> void:
 				recap.append("%s ×%d PERDU (soute pleine)" % [nom, q])
 	fouille[idx] = ", ".join(recap) if not recap.is_empty() else "rien"
 	map["fouille"] = fouille
+	map["fouille_result"] = "Fouillé : « %s » (case %d) — %s" % [site, idx + 1, str(fouille[idx])]
 	bb += "[color=7bed9f]Récapitulatif[/color] : %s\n" % str(fouille[idx])
 	journal.text += bb
 	explore_panel.msg_label.text = "Fouillé (%s) — %s" % [site, str(fouille[idx])]
+	explore_panel.set_fouille_result(str(map["fouille_result"]))
 	explore_panel.select_cell(idx)
 	refresh_all()
 

@@ -211,7 +211,7 @@ static func _valider_cotes(pool: Array, envs: Array, cells: Array) -> Array:
 					envs[i] = MAUtils.pick(pool2)
 				modif = true
 	return envs
-const SITES_HABITES := {"Colonie": 1000, "Village": 10000, "Astroport": 100000, "Ville": 1000000}
+const SITES_HABITES := {"Colonie": 1000, "Village": 10000, "Astroport": 100000, "Ville": 1000000, "Mégalopole": 10000000}
 const SITE_NATUREL := "Crique"
 const SITES_RECUP := ["Ruines", "Décharge", "Champ de bataille", "Épave"]
 
@@ -267,10 +267,12 @@ static func sites_habites(pop: int) -> Array:
 		out.append("Astroport")
 	elif pop <= 1000000:
 		out.append("Ville")
+	elif pop <= 10000000:
+		out.append("Mégalopole")
 	else:
-		var n := int(ceil(pop / 1000000.0))
+		var n := int(ceil(pop / 10000000.0))
 		for i in n:
-			out.append("Ville")
+			out.append("Mégalopole")
 	return out
 
 static func _prendre(libres: Array) -> int:
