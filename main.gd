@@ -51,6 +51,7 @@ var crew_panel: CrewPanel
 var ship_panel: ShipPanel
 var shop_panel: ShopPanel
 var recruit_panel: RecruitPanel
+var explore_panel: ExplorePanel
 var posts_container: VBoxContainer
 var calendar_label: Label
 var jours_label: Label
@@ -176,6 +177,8 @@ func _on_ship_name_gui_input(event: InputEvent) -> void:
 func _on_tab_changed(t: int) -> void:
 	if t == 1 and system_map.is_current_system and ship_body != null:
 		system_map.select_body(ship_body)
+	if t == 6:
+		explore_panel.set_body(ship_body if peut_explorer() else null, _map_seed())
 
 func _build_tabs() -> void:
 	tabs.tab_changed.connect(_on_tab_changed)
@@ -185,6 +188,7 @@ func _build_tabs() -> void:
 	tabs.set_tab_title(3, "Vaisseau")
 	tabs.set_tab_title(4, "Commerce")
 	tabs.set_tab_title(5, "Recruter")
+	tabs.set_tab_title(6, "Explorer")
 
 	var tab_g: Control = tabs.get_child(0)
 	var hb := HBoxContainer.new()
@@ -275,6 +279,10 @@ func _build_tabs() -> void:
 	tabs.get_child(5).add_child(recruit_panel)
 	recruit_panel.recruit_found.connect(_on_recruit_found)
 	recruit_panel.recruit_hired.connect(_on_recruit_hired)
+
+	explore_panel = ExplorePanel.new()
+	explore_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tabs.get_child(6).add_child(explore_panel)
 
 func _build_context_menu() -> void:
 	context_menu = PopupMenu.new()
@@ -654,6 +662,17 @@ func peut_recruter() -> bool:
 		return false
 	return ship_body["type"] == "station" or bool(ship_body.get("habitee", false))
 
+func peut_explorer() -> bool:
+	if current_system == null or ship_body == null:
+		return false
+	var sc: Variant = ship_body.get("scan", null)
+	return sc != null and bool(sc.get("ok", false))
+
+func _map_seed() -> int:
+	if ship_body == null:
+		return 0
+	return int(hash("%d|%d|%d|%s" % [game_seed, current_pos.x, current_pos.y, str(ship_body.get("nom", "?"))]))
+
 func _scan_roller() -> Character:
 	for c in characters:
 		if c.post_index == 1:
@@ -681,33 +700,16 @@ func _on_scanner() -> void:
 	var m := _sante_mod(roller)
 	var r := Dice.test(roller.dice_test("Senseurs") + int(m[0]), 2, str(m[1]))
 	var bb := "[b][color=gold]Scan de %s[/color][/b] (%s, %d h) — Senseurs de %s : %s (diff 2) — total : %d succès\n" % [str(sb.get("nom", "?")), MAUtils.galdate(jours_ecoules), heure_jour, roller.nom, Dice.fmt_jet(r), int(r["succ"])]
-	var infos: Array = []
-	if had_ok:
-		infos = sc0["infos"].duplicate()
 	var astro := false
 	if r["ok"]:
 		astro = sb["type"] == "station"
 		if not astro:
 			var ap: String = str(sb.get("astroport", ""))
 			astro = ap != "" and not ap.begins_with("aucun")
-		if not infos.has("astroport"):
-			infos.append("astroport")
-		var extra: int = int(r["extra"])
-		var nouvelles: Array = []
-		var restantes: Array = []
-		for k in SCAN_EXTRA:
-			if not infos.has(k):
-				restantes.append(k)
-		restantes.shuffle()
-		for i in range(mini(extra, restantes.size())):
-			infos.append(restantes[i])
-			nouvelles.append(restantes[i])
+		var infos: Array = SCAN_EXTRA.duplicate()
+		infos.append("astroport")
 		sb["scan"] = {"ok": true, "astroport": astro, "infos": infos}
-		bb += "[color=7bed9f]Scan réussi[/color] — astroport %s et sa fréquence radio (commerce/recrutement autorisés si cours > 0).\n" % ("détecté" if astro else "NON détecté sur ce corps")
-		if nouvelles.size() > 0:
-			bb += "+%d succès excédentaire(s) → nouvelles infos : %s\n" % [extra, ", ".join(nouvelles)]
-		else:
-			bb += "(aucune info supplémentaire : tout est déjà révélé)\n"
+		bb += "[color=7bed9f]Scan réussi[/color] — toutes les informations du corps sont révélées (astroport %s et sa fréquence radio).\n" % ("détecté" if astro else "NON détecté sur ce corps")
 		bb += "Infos révélées au total (%d) : %s\n" % [infos.size(), ", ".join(infos)]
 	else:
 		if not had_ok:
@@ -1016,6 +1018,10 @@ func _update_buttons() -> void:
 		shop_panel.set_message("Commerce impossible : ce corps ne possède pas d'astroport (même rudimentaire).")
 	elif not peut_commercer():
 		shop_panel.set_message("Commerce impossible ici : cours A/B/C tous à ×0 sur ce corps.")
+	var pe := peut_explorer()
+	tabs.set_tab_disabled(6, not pe)
+	if tabs.current_tab == 6:
+		explore_panel.set_body(ship_body if pe else null, _map_seed())
 
 func _post_skills() -> Dictionary:
 	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0, "dpi": 0, "mpi": "", "dna": 0, "mna": "", "dse": 0, "mse": "", "dss": 0, "mss": "", "ding": 0, "ming": "", "dae": 0, "mae": "", "dca": 0, "mca": ""}
