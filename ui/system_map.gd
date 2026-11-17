@@ -234,18 +234,27 @@ func _on_explore_pressed() -> void:
 
 func refresh_scan_button() -> void:
 	var show: bool = is_current_system and sys != null and ship_body != null and sys.corps.has(ship_body) and selected_body != null and selected_body == ship_body
+	travel_button.disabled = selected_body == null or (ship_body != null and selected_body == ship_body)
+	if selected_body != null and ship_body != null and selected_body == ship_body:
+		travel_button.tooltip_text = "Le vaisseau est déjà en orbite autour de ce corps (0 US)"
 	scan_button.visible = show
+	explorer_button.visible = show
 	if not show:
 		scan_button.disabled = true
 		scan_button.tooltip_text = "Sélectionnez dans la carte le corps où se trouve le vaisseau pour pouvoir le scanner"
+		explorer_button.disabled = true
+		explorer_button.tooltip_text = "Sélectionnez dans la carte le corps où se trouve le vaisseau pour pouvoir l'explorer"
 		return
 	var sc: Variant = ship_body.get("scan", null)
 	var deja: bool = sc != null and bool(sc.get("ok", false))
 	scan_button.disabled = deja
+	explorer_button.disabled = not deja
 	if deja:
 		scan_button.tooltip_text = "Corps déjà scanné : toutes les informations sont révélées"
+		explorer_button.tooltip_text = "Ouvrir la carte hexagonale de ce corps (onglet Explorer)"
 	else:
 		scan_button.tooltip_text = "Scanner (1 h) : test de Senseurs difficulté 2 — révèle toutes les infos du corps et détecte l'astroport"
+		explorer_button.tooltip_text = "Scanner d'abord ce corps (1 h) pour pouvoir l'explorer"
 
 func set_system(s: StarSystem) -> void:
 	sys = s

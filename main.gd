@@ -1014,7 +1014,6 @@ func _update_buttons() -> void:
 		shop_panel.set_message("Commerce impossible ici : cours A/B/C tous à ×0 sur ce corps.")
 	var pe := peut_explorer()
 	tabs.set_tab_disabled(6, not pe)
-	system_map.explorer_button.disabled = not pe
 	if tabs.current_tab == 6:
 		explore_panel.set_body(ship_body if pe else null, _map_seed())
 
