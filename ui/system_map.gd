@@ -3,6 +3,7 @@ extends GridContainer
 
 signal travel_requested(body: Dictionary)
 signal scan_requested
+signal explore_requested
 
 const SCAN_GATED := ["classe", "diametre", "atmosphere", "environnement", "eau", "gravite", "systeme_orbital", "commerce", "securite", "astroport"]
 const SCAN_TEXT_INFOS := ["sources d'énergie", "satellites artificiels ou trafic aérien", "dégagements d'énergie typiques de combats spatiaux en orbite"]
@@ -97,6 +98,7 @@ var sys_details: RichTextLabel
 var body_details: RichTextLabel
 var travel_button: Button
 var scan_button: Button
+var explorer_button: Button
 var sys_msg: Label
 var journal_label: RichTextLabel
 var sys: StarSystem
@@ -139,9 +141,13 @@ func _ready() -> void:
 	travel_button.pressed.connect(_on_travel_pressed)
 	btns.add_child(travel_button)
 	scan_button = Button.new()
-	scan_button.text = "Scanner ce corps (1 h)"
+	scan_button.text = "Scanner (1 h)"
 	scan_button.pressed.connect(_on_scan_pressed)
 	btns.add_child(scan_button)
+	explorer_button = Button.new()
+	explorer_button.text = "Explorer"
+	explorer_button.pressed.connect(_on_explore_pressed)
+	btns.add_child(explorer_button)
 	sys_msg = Label.new()
 	sys_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sys_msg.add_theme_font_size_override("font_size", 11)
@@ -223,6 +229,9 @@ func _on_travel_pressed() -> void:
 func _on_scan_pressed() -> void:
 	scan_requested.emit()
 
+func _on_explore_pressed() -> void:
+	explore_requested.emit()
+
 func refresh_scan_button() -> void:
 	var show: bool = is_current_system and sys != null and ship_body != null and sys.corps.has(ship_body) and selected_body != null and selected_body == ship_body
 	scan_button.visible = show
@@ -230,8 +239,13 @@ func refresh_scan_button() -> void:
 		scan_button.disabled = true
 		scan_button.tooltip_text = "Sélectionnez dans la carte le corps où se trouve le vaisseau pour pouvoir le scanner"
 		return
-	scan_button.disabled = false
-	scan_button.tooltip_text = "Scanner (1 h, rescan possible) : test de Senseurs difficulté 2 — détecte l'astroport et sa fréquence radio ; +1 info par succès excédentaire"
+	var sc: Variant = ship_body.get("scan", null)
+	var deja: bool = sc != null and bool(sc.get("ok", false))
+	scan_button.disabled = deja
+	if deja:
+		scan_button.tooltip_text = "Corps déjà scanné : toutes les informations sont révélées"
+	else:
+		scan_button.tooltip_text = "Scanner (1 h) : test de Senseurs difficulté 2 — révèle toutes les infos du corps et détecte l'astroport"
 
 func set_system(s: StarSystem) -> void:
 	sys = s

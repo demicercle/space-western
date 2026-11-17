@@ -72,9 +72,9 @@ static func galactic_basic(nom: String) -> Ship:
 	s.origine = "OCG"
 	s.systemes_secondaires = []
 	s.radix_pc = s.autonomie_pc
-	s.rations = 30
+	s.rations = 200
 	s.cargaison = {
-		"Ration": 30,
+		"Ration": 200,
 		"Medikit": 1,
 		"Munitions laser (x10)": 4,
 		"Scaphandre": 2,
@@ -114,9 +114,9 @@ static func galactic_scout(nom: String) -> Ship:
 	s.origine = "OCG"
 	s.systemes_secondaires = ["Sas d'abordage", "Infirmerie"]
 	s.radix_pc = s.autonomie_pc
-	s.rations = 30
+	s.rations = 200
 	s.cargaison = {
-		"Ration": 30,
+		"Ration": 200,
 		"Medikit": 1,
 		"Munitions laser (x10)": 4,
 		"Scaphandre": 2,

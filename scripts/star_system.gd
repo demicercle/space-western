@@ -324,7 +324,7 @@ func peut_amarrer() -> bool:
 	return false
 
 static func parse_cours(cours: String) -> Dictionary:
-	var def := {"A": 1.0, "B": 1.0, "C": 1.0}
+	var def := {"A": 0.0, "B": 0.0, "C": 0.0}
 	if cours.contains("A :"):
 		var re := RegEx.create_from_string("([ABC]) : ([0-9]+(?:[.,][0-9]+)?)")
 		for m in re.search_all(cours):
@@ -332,9 +332,9 @@ static func parse_cours(cours: String) -> Dictionary:
 	return def
 
 func cours_dict() -> Dictionary:
-	var def := {"A": 1.0, "B": 1.0, "C": 1.0}
+	var def := {"A": 0.0, "B": 0.0, "C": 0.0}
 	if est_relais:
-		return def
+		return {"A": 1.0, "B": 1.0, "C": 1.0}
 	for c in corps:
 		var cours: String = str(c.get("cours", ""))
 		if c.get("habitee", false) and cours.contains("A :"):

@@ -257,6 +257,7 @@ func _build_tabs() -> void:
 	tabs.get_child(1).add_child(system_map)
 	system_map.travel_requested.connect(_on_voyage_inter)
 	system_map.scan_requested.connect(_on_scanner)
+	system_map.explore_requested.connect(_on_explore_pressed)
 
 	crew_panel = CrewPanel.new()
 	crew_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -592,7 +593,7 @@ func cours_actuel() -> Dictionary:
 		return StarSystem.parse_cours(str(ship_body["cours"]))
 	if current_system != null:
 		return current_system.cours_dict()
-	return {"A": 1.0, "B": 1.0, "C": 1.0}
+	return {"A": 0.0, "B": 0.0, "C": 0.0}
 
 func cours_txt() -> String:
 	var c := cours_actuel()
@@ -936,16 +937,9 @@ func _on_cell_double_clicked(col: int, row: int) -> void:
 	tabs.current_tab = 1
 
 func _update_system_tab() -> void:
-	var sel := galaxy_map.selected_cell
-	if sel.x < 0:
-		sel = current_pos
-	var showing_current := sel == current_pos
-	system_map.set_system(get_system(sel))
-	system_map.is_current_system = showing_current
-	if showing_current:
-		system_map.set_ship_pos(ship_orbite_us, ship_angle, ship_body)
-	else:
-		system_map.set_ship_pos(-1.0, 0.0, null)
+	system_map.set_system(current_system)
+	system_map.is_current_system = true
+	system_map.set_ship_pos(ship_orbite_us, ship_angle, ship_body)
 
 func _sante_mod(c: Character) -> Array:
 	var idx := c.sante_index()
@@ -1020,8 +1014,13 @@ func _update_buttons() -> void:
 		shop_panel.set_message("Commerce impossible ici : cours A/B/C tous à ×0 sur ce corps.")
 	var pe := peut_explorer()
 	tabs.set_tab_disabled(6, not pe)
+	system_map.explorer_button.disabled = not pe
 	if tabs.current_tab == 6:
 		explore_panel.set_body(ship_body if pe else null, _map_seed())
+
+func _on_explore_pressed() -> void:
+	if peut_explorer():
+		tabs.current_tab = 6
 
 func _post_skills() -> Dictionary:
 	var sk := {"pi": 0, "na": 0, "se": 0, "ss": 0, "ing": 0, "cae": 0, "carto": 0, "dpi": 0, "mpi": "", "dna": 0, "mna": "", "dse": 0, "mse": "", "dss": 0, "mss": "", "ding": 0, "ming": "", "dae": 0, "mae": "", "dca": 0, "mca": ""}
