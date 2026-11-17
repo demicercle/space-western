@@ -75,6 +75,10 @@ var sell_dialog: AcceptDialog
 var sell_edit: LineEdit
 var sell_price_label: Label
 var pending_sell := ""
+var buy_dialog: AcceptDialog
+var buy_edit: LineEdit
+var buy_price_label: Label
+var pending_buy: Variant = null
 var pending_virer: Character = null
 var panel_style: StyleBoxFlat
 var ship_health_label: Label
@@ -312,6 +316,9 @@ func _build_context_menu() -> void:
 	sell_dialog.title = "Vendre"
 	sell_dialog.get_ok_button().text = "OK"
 	sell_dialog.add_cancel_button("Annuler")
+	sell_dialog.unresizable = true
+	sell_dialog.min_size = Vector2i(256, 256)
+	sell_dialog.size = Vector2i(256, 256)
 	sell_edit = LineEdit.new()
 	sell_edit.placeholder_text = "quantité à vendre"
 	sell_dialog.add_child(sell_edit)
@@ -322,6 +329,24 @@ func _build_context_menu() -> void:
 	sell_edit.text_changed.connect(func(_t: String) -> void: _update_sell_price())
 	sell_dialog.confirmed.connect(_on_sell_dialog_confirmed)
 	sell_dialog.canceled.connect(func() -> void: pending_sell = "")
+	buy_dialog = AcceptDialog.new()
+	add_child(buy_dialog)
+	buy_dialog.title = "Acheter"
+	buy_dialog.get_ok_button().text = "OK"
+	buy_dialog.add_cancel_button("Annuler")
+	buy_dialog.unresizable = true
+	buy_dialog.min_size = Vector2i(256, 256)
+	buy_dialog.size = Vector2i(256, 256)
+	buy_edit = LineEdit.new()
+	buy_edit.placeholder_text = "quantité à acheter"
+	buy_dialog.add_child(buy_edit)
+	buy_price_label = Label.new()
+	buy_price_label.add_theme_font_size_override("font_size", 13)
+	buy_price_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
+	buy_dialog.add_child(buy_price_label)
+	buy_edit.text_changed.connect(func(_t: String) -> void: _update_buy_price())
+	buy_dialog.confirmed.connect(_on_buy_dialog_confirmed)
+	buy_dialog.canceled.connect(func() -> void: pending_buy = null)
 
 func _ask_voyage_confirm(text: String, action: Callable) -> void:
 	pending_voyage = action
@@ -626,27 +651,94 @@ func cours_txt() -> String:
 func radix_unit_price() -> float:
 	return ship.tonnage * (1.5 if current_system != null and current_system.est_relais else 0.75)
 
+func _buy_q_max(it: Variant) -> float:
+	var prix_u := float(ShopTables.prix_achat(it, cours_actuel()))
+	if prix_u <= 0.0:
+		return 0.0
+	var q_credits := float(credits) / prix_u
+	var q_soute := (float(ship.soute) - soute_used()) / ShopTables.place_de(str(it["nom"]))
+	return minf(q_credits, maxf(0.0, q_soute))
+
+func _buy_q(it: Variant, v: float) -> float:
+	var q_max := _buy_q_max(it)
+	if ShopTables.est_marchandise(str(it["nom"])):
+		var kg_max := q_max * ShopTables.place_de(str(it["nom"])) * 1000.0
+		return minf(v, kg_max) / (ShopTables.place_de(str(it["nom"])) * 1000.0)
+	return floor(minf(v, q_max))
+
+func _update_buy_price() -> void:
+	var it: Variant = pending_buy
+	if it == null:
+		buy_price_label.text = ""
+		return
+	var prix_u := float(ShopTables.prix_achat(it, cours_actuel()))
+	var t := buy_edit.text.replace(" ", "").replace(",", ".")
+	var v := t.to_float()
+	if v < 0.0:
+		v = 0.0
+	var cost := int(round(prix_u * _buy_q(it, v)))
+	buy_price_label.text = "Prix total : %s €" % MAUtils.fmt_int(cost)
+
 func _on_buy(it: Dictionary) -> void:
-	var lot: int = ShopTables.lot_de(it)
-	var prix := ShopTables.prix_achat(it, cours_actuel()) * lot
-	var place: float = float(it["place"]) * lot
 	if not peut_commercer():
 		shop_panel.set_message("Commerce indisponible ici : %s." % raison_commerce())
 		return
-	if prix < 0:
+	var prix_u: int = ShopTables.prix_achat(it, cours_actuel())
+	if prix_u < 0:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), str(it["nom"])])
 		return
-	if credits < prix:
-		shop_panel.set_message("Crédits insuffisants pour %s (%s €)." % [ShopTables.nom_affiche(str(it["nom"])), MAUtils.fmt_int(prix)])
+	pending_buy = it
+	var nom: String = str(it["nom"])
+	var lot: int = ShopTables.lot_de(it)
+	var q_max := _buy_q_max(it)
+	if ShopTables.est_marchandise(nom):
+		var kg_max := q_max * ShopTables.place_de(nom) * 1000.0
+		buy_dialog.dialog_text = "Indiquer la quantité à acheter : %s — en kg (1 UC = 1 000 kg). Prix : %s €/UC. Max achetable : %s kg." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(prix_u), MAUtils.fmt_int(kg_max)]
+		buy_edit.text = MAUtils.fmt_int(kg_max)
+	else:
+		var u_max := int(floor(q_max))
+		buy_dialog.dialog_text = "Indiquer la quantité à acheter : %s — en unités (1 unité pèse %s). Prix : %s €/u. Max achetable : %d unité(s)." % [ShopTables.nom_affiche(nom), ShopTables.tonnage_txt(1.0, ShopTables.place_de(nom)), MAUtils.fmt_int(prix_u), u_max]
+		buy_edit.text = str(maxi(1, mini(lot, u_max)))
+	buy_dialog.popup_centered()
+	_update_buy_price()
+
+func _on_buy_dialog_confirmed() -> void:
+	var it: Variant = pending_buy
+	pending_buy = null
+	if it == null:
 		return
-	if soute_used() + place > ship.soute + 0.0001:
-		shop_panel.set_message("Plus de place en soute pour %s." % it["nom"])
+	var nom: String = str(it["nom"])
+	if not peut_commercer():
+		shop_panel.set_message("Commerce indisponible ici : %s." % raison_commerce())
 		return
-	credits -= prix
-	ship.cargaison[it["nom"]] = int(ship.cargaison.get(it["nom"], 0)) + lot
-	if it["nom"] == "Ration":
+	var prix_u: int = ShopTables.prix_achat(it, cours_actuel())
+	if prix_u < 0:
+		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), nom])
+		return
+	var t := buy_edit.text.replace(" ", "").replace(",", ".")
+	var v := t.to_float()
+	if v <= 0.0:
+		shop_panel.set_message("Rien acheté (quantité nulle).")
+		return
+	var q := _buy_q(it, v)
+	var cost := int(round(prix_u * q))
+	if q <= 0.0001 or cost <= 0:
+		shop_panel.set_message("Rien acheté (crédits ou soute insuffisants pour cette quantité).")
+		return
+	if cost > credits:
+		shop_panel.set_message("Crédits insuffisants pour %s (%s €)." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(cost)])
+		return
+	if soute_used() + ShopTables.place_de(nom) * q > ship.soute + 0.0001:
+		shop_panel.set_message("Plus de place en soute pour %s." % nom)
+		return
+	credits -= cost
+	ship.cargaison[nom] = float(ship.cargaison.get(nom, 0)) + q
+	if nom == "Ration":
 		ship.rations = int(ship.cargaison["Ration"])
-	shop_panel.set_message("Acheté : %s pour %s € (%s en soute)." % [ShopTables.nom_affiche(str(it["nom"])), MAUtils.fmt_int(prix), MAUtils.fmt_num(float(ship.cargaison[it["nom"]]))])
+	var qtxt := "×%s" % MAUtils.fmt_num(q)
+	if ShopTables.est_marchandise(nom):
+		qtxt = "%s kg" % MAUtils.fmt_int(q * ShopTables.place_de(nom) * 1000.0)
+	shop_panel.set_message("Acheté : %s %s pour %s € (%s en soute)." % [ShopTables.nom_affiche(nom), qtxt, MAUtils.fmt_int(cost), ShopTables.quantite_soute_txt(nom, float(ship.cargaison[nom]))])
 	refresh_all()
 
 func _on_sell(nom: String) -> void:
