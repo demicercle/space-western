@@ -1,6 +1,8 @@
 class_name ExplorePanel
 extends VBoxContainer
 
+signal fouiller_requested
+
 
 class MapCanvas extends Control:
 	var panel: ExplorePanel
@@ -16,6 +18,7 @@ var msg_label: Label
 var canvas: MapCanvas
 var legend_label: Label
 var info_label: Label
+var btn_fouiller: Button
 var map := {}
 var selected := -1
 var centres: Array = []
@@ -51,9 +54,19 @@ func _ready() -> void:
 	info_label.add_theme_font_size_override("font_size", 12)
 	info_label.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 	add_child(info_label)
+	btn_fouiller = Button.new()
+	btn_fouiller.text = "Fouiller (1 jour)"
+	btn_fouiller.visible = false
+	btn_fouiller.tooltip_text = "Action « Fouiller » : 1 jour, un test de Recherche par article du tableau selon le type de site"
+	btn_fouiller.pressed.connect(_on_fouiller_pressed)
+	add_child(btn_fouiller)
+
+func _on_fouiller_pressed() -> void:
+	fouiller_requested.emit()
 
 func set_body(body: Variant, graine: int) -> void:
 	selected = -1
+	btn_fouiller.visible = false
 	if body == null:
 		map = {}
 		title_label.text = "Explorer"
@@ -202,5 +215,10 @@ func select_cell(i: int) -> void:
 		txt += " · site : %s" % site
 	else:
 		txt += " · aucun site"
+	var fouille: Dictionary = map.get("fouille", {})
+	btn_fouiller.visible = PlanetMap.SITES_RECUP.has(site)
+	btn_fouiller.disabled = fouille.has(i)
+	if fouille.has(i):
+		txt += " · fouillé : %s" % str(fouille[i])
 	info_label.text = txt
 	canvas.queue_redraw()

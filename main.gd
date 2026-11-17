@@ -286,6 +286,7 @@ func _build_tabs() -> void:
 	explore_panel = ExplorePanel.new()
 	explore_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(2).add_child(explore_panel)
+	explore_panel.fouiller_requested.connect(_on_fouiller)
 
 func _build_context_menu() -> void:
 	context_menu = PopupMenu.new()
@@ -1051,6 +1052,82 @@ func _update_buttons() -> void:
 func _on_explore_pressed() -> void:
 	if peut_explorer():
 		tabs.current_tab = TAB_EXPLORER
+
+func _on_fouiller() -> void:
+	if not peut_explorer() or explore_panel.selected < 0:
+		return
+	var map: Dictionary = ship_body.get("planet_map", {})
+	var sites: Dictionary = map.get("sites", {})
+	var idx: int = explore_panel.selected
+	if not sites.has(idx):
+		return
+	var site: String = str(sites[idx])
+	if not PlanetMap.SITES_RECUP.has(site):
+		explore_panel.msg_label.text = "Pas de site de récupération sur cette case."
+		return
+	var fouille: Dictionary = map.get("fouille", {})
+	if fouille.has(idx):
+		explore_panel.msg_label.text = "Ce site a déjà été fouillé."
+		return
+	var roller: Character = null
+	var best_v := -1
+	for c in characters:
+		var v: int = c.dice_test("Recherche")
+		if v > best_v:
+			best_v = v
+			roller = c
+	if roller == null:
+		explore_panel.msg_label.text = "Fouiller impossible : aucun personnage avec Recherche à bord."
+		return
+	avancer_jours(1)
+	var recap: Array = []
+	var bb := "[b][color=gold]Fouiller[/color][/b] — site « %s », case %d (%s, %d h, 1 jour) — Recherche de %s\n" % [site, idx + 1, MAUtils.galdate(jours_ecoules), heure_jour, roller.nom]
+	for article in PlanetMap.ARTICLES_FOUILLE:
+		var drow: Dictionary = PlanetMap.FOUILLE_DIFF.get(article, {})
+		var diff: int = int(drow.get(site, -1))
+		if diff < 0:
+			continue
+		var m := _sante_mod(roller)
+		var r := Dice.test(roller.dice_test("Recherche") + int(m[0]), diff, str(m[1]))
+		bb += "  %s : %s (diff %d) = %d succès%s\n" % [article, Dice.fmt_jet(r), diff, int(r["succ"]), "" if r["ok"] else " — raté"]
+		if not r["ok"]:
+			continue
+		var q: int = maxi(1, int(r["succ"]))
+		var nom := ""
+		var radix := false
+		match article:
+			"Pièces détachées (100 kg)":
+				nom = "Pièces détachées (1 kg)"
+				q = 100 * q
+			"Métaux":
+				nom = "Métaux (1 UC)"
+			"Métaux précieux":
+				nom = "Métaux précieux (1 UC)"
+			"Carburant (Radix)":
+				radix = true
+			"Armes":
+				nom = "Armes (1 UC)"
+			"Artefacts technologiques":
+				nom = "Artefacts technologiques (1 UC)"
+			"Artefacts archéologiques":
+				nom = "Artefacts archéologiques (1 UC)"
+		if radix:
+			ship.radix_pc = mini(ship.autonomie_pc, ship.radix_pc + 1000 * q)
+			recap.append("Radix +%d PC (réserve %s / %s PC)" % [1000 * q, MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)])
+		else:
+			var place := ShopTables.place_de(nom) * q
+			if soute_used() + place <= ship.soute + 0.0001:
+				ship.cargaison[nom] = int(ship.cargaison.get(nom, 0)) + q
+				recap.append("%s ×%d" % [nom, q])
+			else:
+				recap.append("%s ×%d PERDU (soute pleine)" % [nom, q])
+	fouille[idx] = ", ".join(recap) if not recap.is_empty() else "rien"
+	map["fouille"] = fouille
+	bb += "[color=7bed9f]Récapitulatif[/color] : %s\n" % str(fouille[idx])
+	journal.text += bb
+	explore_panel.msg_label.text = "Fouillé (%s) — %s" % [site, str(fouille[idx])]
+	explore_panel.select_cell(idx)
+	refresh_all()
 
 
 

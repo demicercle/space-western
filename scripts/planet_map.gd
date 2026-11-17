@@ -211,9 +211,20 @@ static func _valider_cotes(pool: Array, envs: Array, cells: Array) -> Array:
 					envs[i] = MAUtils.pick(pool2)
 				modif = true
 	return envs
-const SITES_HABITES := {"Colonie": 100, "Village": 1000, "Astroport": 10000, "Ville": 100000}
+const SITES_HABITES := {"Colonie": 1000, "Village": 10000, "Astroport": 100000, "Ville": 1000000}
 const SITE_NATUREL := "Crique"
 const SITES_RECUP := ["Ruines", "Décharge", "Champ de bataille", "Épave"]
+
+const ARTICLES_FOUILLE := ["Pièces détachées (100 kg)", "Métaux", "Métaux précieux", "Carburant (Radix)", "Armes", "Artefacts technologiques", "Artefacts archéologiques"]
+const FOUILLE_DIFF := {
+	"Pièces détachées (100 kg)": {"Champ de bataille": 2, "Épave": 1, "Décharge": 1, "Ruines": -1},
+	"Métaux": {"Champ de bataille": -1, "Épave": 2, "Décharge": 3, "Ruines": -1},
+	"Métaux précieux": {"Champ de bataille": -1, "Épave": 3, "Décharge": 3, "Ruines": -1},
+	"Carburant (Radix)": {"Champ de bataille": -1, "Épave": 2, "Décharge": 3, "Ruines": -1},
+	"Armes": {"Champ de bataille": 2, "Épave": -1, "Décharge": 3, "Ruines": -1},
+	"Artefacts technologiques": {"Champ de bataille": 3, "Épave": -1, "Décharge": -1, "Ruines": 2},
+	"Artefacts archéologiques": {"Champ de bataille": -1, "Épave": -1, "Décharge": -1, "Ruines": 2},
+}
 
 static var _re_pop := RegEx.create_from_string("([0-9][0-9 ]*)")
 
@@ -248,16 +259,16 @@ static func sites_habites(pop: int) -> Array:
 	var out: Array = []
 	if pop <= 0:
 		return out
-	if pop <= 100:
+	if pop <= 1000:
 		out.append("Colonie")
-	elif pop <= 1000:
-		out.append("Village")
 	elif pop <= 10000:
-		out.append("Astroport")
+		out.append("Village")
 	elif pop <= 100000:
+		out.append("Astroport")
+	elif pop <= 1000000:
 		out.append("Ville")
 	else:
-		var n := int(ceil(pop / 100000.0))
+		var n := int(ceil(pop / 1000000.0))
 		for i in n:
 			out.append("Ville")
 	return out
