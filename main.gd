@@ -179,7 +179,7 @@ func _on_tab_changed(t: int) -> void:
 	if t == 1 and system_map.is_current_system and ship_body != null:
 		system_map.select_body(ship_body)
 	if t == TAB_EXPLORER:
-		explore_panel.set_body(ship_body if peut_explorer() else null, _map_seed(), ship.recup, int(ship.cargaison.get("Scaphandre", 0)) > 0)
+		explore_panel.set_body(ship_body if peut_explorer() else null, _map_seed())
 
 func _build_tabs() -> void:
 	tabs.tab_changed.connect(_on_tab_changed)
@@ -286,8 +286,6 @@ func _build_tabs() -> void:
 	explore_panel = ExplorePanel.new()
 	explore_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tabs.get_child(2).add_child(explore_panel)
-	explore_panel.recup_requested.connect(_on_recup)
-	explore_panel.remettre_requested.connect(_on_remettre)
 
 func _build_context_menu() -> void:
 	context_menu = PopupMenu.new()
@@ -1048,153 +1046,13 @@ func _update_buttons() -> void:
 	tabs.set_tab_disabled(TAB_EXPLORER, not pe)
 	system_map.commerce_button.disabled = not peut_commercer()
 	if tabs.current_tab == TAB_EXPLORER:
-		explore_panel.set_body(ship_body if pe else null, _map_seed(), ship.recup, int(ship.cargaison.get("Scaphandre", 0)) > 0)
+		explore_panel.set_body(ship_body if pe else null, _map_seed())
 
 func _on_explore_pressed() -> void:
 	if peut_explorer():
 		tabs.current_tab = TAB_EXPLORER
 
-func _recup_roller(comp: String) -> Character:
-	var best: Character = null
-	var best_v := -1
-	for c in characters:
-		var v: int = c.dice_test(comp)
-		if v > best_v:
-			best_v = v
-			best = c
-	return best
 
-func _on_recup(site: String, trouvaille: String, recharge: String) -> void:
-	if not peut_explorer():
-		explore_panel.msg_label.text = "Récoup impossible : scannez d'abord le corps (carte de système)."
-		return
-	var sites := SalvageTables.sites_du_corps(ship_body)
-	if not sites.has(site):
-		explore_panel.msg_label.text = "Site « %s » inconnu sur ce corps." % site
-		return
-	if SalvageTables.est_site_espace(site) and int(ship.cargaison.get("Scaphandre", 0)) <= 0:
-		explore_panel.msg_label.text = "Site spatial (E) : il faut un scaphandre en soute."
-		return
-	var roller: Character = _recup_roller("Recherche")
-	if roller == null:
-		explore_panel.msg_label.text = "Récoup impossible : aucun personnage avec Recherche à bord."
-		return
-	var mod := SalvageTables.modif(site, trouvaille)
-	if mod == "x":
-		explore_panel.msg_label.text = "« %s » indisponible sur « %s » (au MJ : 1 PP pour tenter avec TD)." % [trouvaille, site]
-		return
-	avancer_jours(1)
-	var m := _sante_mod(roller)
-	var nd: int = roller.dice_test("Recherche") + int(m[0])
-	var diff := 1
-	var mode := str(m[1])
-	var mods := ""
-	match mod:
-		"D+1":
-			diff += 1
-			mods = " D+1 (%s)" % site
-		"+1d":
-			nd += 1
-			mods = " +1d (%s)" % site
-		"TD":
-			mode = "TD"
-			mods = " (TD, %s)" % site
-	var r := Dice.test(nd, diff, mode)
-	var bb := "[b][color=gold]Récoup ![/color][/b] — site « %s », trouvaille « %s » (%s, %d h) — Recherche de %s : %s (diff %d%s) = %d succès\n" % [site, trouvaille, MAUtils.galdate(jours_ecoules), heure_jour, roller.nom, Dice.fmt_jet(r), diff, mods, int(r["succ"])]
-	var loot := ""
-	if r["ok"]:
-		var extra: int = int(r["extra"])
-		match trouvaille:
-			"Composants électroniques":
-				ship.recup["comp_elec"] = int(ship.recup.get("comp_elec", 0)) + 100 * extra
-				loot = "%d kg de composants électroniques" % (100 * extra)
-			"Composants industriels":
-				ship.recup["comp_indus"] = int(ship.recup.get("comp_indus", 0)) + 100 * extra
-				loot = "%d kg de composants industriels" % (100 * extra)
-			"Composants spatiaux":
-				ship.recup["comp_spatial"] = int(ship.recup.get("comp_spatial", 0)) + 100 * extra
-				loot = "%d kg de composants spatiaux" % (100 * extra)
-			"Recharge":
-				var q := SalvageTables.recharge_quantite(recharge, extra)
-				if recharge == "Radix":
-					var besoin: int = int(ceil(ship.tonnage / 10.0))
-					if extra >= besoin:
-						ship.radix_pc = ship.autonomie_pc
-						loot = "réserves de secours remplies (Radix plein : %s / %s PC)" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
-					else:
-						loot = "Radix insuffisant (%d succès requis pour %d t, %d obtenus)" % [besoin, ship.tonnage, extra]
-				else:
-					var rec: Dictionary = ship.recup.get("recharges", {})
-					rec[recharge] = int(rec.get(recharge, 0)) + q
-					ship.recup["recharges"] = rec
-					loot = "%d × recharge %s" % [q, recharge]
-			"Épave (vaisseau)":
-				ship.recup["epave_vaisseau"] = int(ship.recup.get("epave_vaisseau", 0)) + 1
-				ship.recup["epave_sys"] = extra
-				loot = "épave de vaisseau 100 t (≤ 25 000 R) — %d système(s) principal(aux) fonctionnel(s), les autres détruits" % extra
-			"Épave (véhicule)":
-				ship.recup["epave_vehicule"] = int(ship.recup.get("epave_vehicule", 0)) + 1
-				loot = "épave de véhicule"
-			"Marchandise":
-				var dispo_c: Array = []
-				for it in ShopTables.CATALOGUE + ShopTables.MARCHANDISES:
-					if str(it.get("dispo", "C")) == "C":
-						dispo_c.append(str(it["nom"]))
-				var noms: Array = []
-				for i in range(extra):
-					var nom_m: String = MAUtils.pick(dispo_c)
-					ship.cargaison[nom_m] = int(ship.cargaison.get(nom_m, 0)) + 1
-					noms.append(nom_m)
-				loot = "%d cargo de marchandise (catégorie C) : %s" % [extra, ", ".join(noms)]
-			"Minerai":
-				ship.recup["minerai"] = int(ship.recup.get("minerai", 0)) + 100 * extra
-				loot = "%d kg de minerai" % (100 * extra)
-		bb += "[color=7bed9f]Trouvé[/color] (%d succès excédentaire(s)) : %s\n" % [extra, loot]
-	else:
-		bb += "[color=ff5544]Rien trouvé[/color].\n"
-	journal.text += bb
-	explore_panel.msg_label.text = ("Récoup ! %s — %s (1 jour écoulé, %s)." % [site, loot if loot != "" else "rien trouvé", MAUtils.galdate(jours_ecoules)])
-	refresh_all()
-
-func _on_remettre(produit: String) -> void:
-	if not peut_explorer():
-		explore_panel.msg_label.text = "Remettre à neuf impossible ici : scannez d'abord le corps."
-		return
-	var comp := SalvageTables.comp_remise(produit)
-	var roller: Character = _recup_roller(comp)
-	if roller == null:
-		explore_panel.msg_label.text = "Remise à neuf impossible : aucun personnage avec %s à bord." % comp
-		return
-	var nb_sys := 4 + ship.systemes_secondaires.size()
-	var besoin := SalvageTables.besoin_remise(produit, nb_sys)
-	for k in besoin.keys():
-		if int(ship.recup.get(k, 0)) < int(besoin[k]):
-			explore_panel.msg_label.text = "Il manque « %s » : %d requis, %d en stock." % [k, int(besoin[k]), int(ship.recup.get(k, 0))]
-			return
-	var diff := SalvageTables.diff_remise(produit, ship.prix)
-	avancer_jours(1)
-	var m := _sante_mod(roller)
-	var r := Dice.test(roller.dice_test(comp) + int(m[0]), diff, str(m[1]))
-	var bb := "[b][color=gold]Remettre à neuf[/color][/b] — %s (%s, %d h) — %s de %s : %s (diff %d) = %d succès\n" % [produit, MAUtils.galdate(jours_ecoules), heure_jour, comp, roller.nom, Dice.fmt_jet(r), diff, int(r["succ"])]
-	var loot := ""
-	if r["ok"]:
-		for k in besoin.keys():
-			ship.recup[k] = int(ship.recup.get(k, 0)) - int(besoin[k])
-		var p: Dictionary = SalvageTables.PRODUITS.get(produit, {})
-		if bool(p.get("vaisseau", false)):
-			ship.structure_pv = ship.coque_pv
-			ship.detruit = false
-			loot = "vaisseau spatial remis à neuf « de fortune » — coque %d/%d PV" % [ship.structure_pv, ship.coque_pv]
-		else:
-			var donne: String = str(p.get("donne", produit))
-			ship.cargaison[donne] = int(ship.cargaison.get(donne, 0)) + 1
-			loot = "1 × %s (de fortune : E2F, occasion/abîmé)" % donne
-		bb += "[color=7bed9f]Réussi[/color] : %s (composants consommés)\n" % loot
-	else:
-		bb += "[color=ff5544]Raté[/color] — rien n'est consommé.\n"
-	journal.text += bb
-	explore_panel.msg_label.text = ("Remettre à neuf — %s : %s (1 jour écoulé, %s)." % [produit, loot if loot != "" else "raté", MAUtils.galdate(jours_ecoules)])
-	refresh_all()
 
 func _on_commerce_pressed() -> void:
 	if peut_commercer():
