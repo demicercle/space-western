@@ -3,6 +3,7 @@ extends Control
 
 signal cell_clicked(col: int, row: int)
 signal cell_right_clicked(col: int, row: int)
+signal cell_double_clicked(col: int, row: int)
 
 var map_tex: Texture2D
 var current_pos := GalaxyData.EXXALIA
@@ -55,7 +56,12 @@ func _cell_at(pos: Vector2) -> Vector2i:
 	return Vector2i(col, row)
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
+		_layout()
+		var c := _cell_at(event.position)
+		cell_double_clicked.emit(c.x, c.y)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_layout()
 		var c := _cell_at(event.position)
 		cell_clicked.emit(c.x, c.y)

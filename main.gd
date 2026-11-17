@@ -2,6 +2,7 @@ class_name Main
 extends Control
 
 const POSTS := ["Pilote", "Vigie", "Ingénieur", "Canonnier", "Fusilier", "Cartographe / Historien"]
+const TAB_VAISSEAU := 3
 const TAB_COMMERCE := 4
 const TAB_RECRUTER := 5
 
@@ -58,6 +59,7 @@ var pos_label: Label
 var credits_label: Label
 var captain_label: Label
 var info_label: Label
+var warn_label: Label
 var travel_info_label: Label
 var msg_label: Label
 var plein_button: Button
@@ -120,6 +122,9 @@ func _build_left_panel() -> void:
 	ship_name_label = Label.new()
 	ship_name_label.add_theme_font_size_override("font_size", 16)
 	ship_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
+	ship_name_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	ship_name_label.tooltip_text = "Ouvrir l'onglet Vaisseau"
+	ship_name_label.gui_input.connect(_on_ship_name_gui_input)
 	left_vbox.add_child(ship_name_label)
 	pos_label = Label.new()
 	pos_label.add_theme_font_size_override("font_size", 12)
@@ -164,6 +169,10 @@ func _build_left_panel() -> void:
 	posts_container.add_theme_constant_override("separation", 6)
 	left_vbox.add_child(posts_container)
 
+func _on_ship_name_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		tabs.current_tab = TAB_VAISSEAU
+
 func _on_tab_changed(t: int) -> void:
 	if t == 1 and system_map.is_current_system and ship_body != null:
 		system_map.select_body(ship_body)
@@ -187,6 +196,7 @@ func _build_tabs() -> void:
 	galaxy_map.size_flags_vertical = SIZE_EXPAND_FILL
 	galaxy_map.cell_clicked.connect(_on_cell_clicked)
 	galaxy_map.cell_right_clicked.connect(_on_cell_right_clicked)
+	galaxy_map.cell_double_clicked.connect(_on_cell_double_clicked)
 	hb.add_child(galaxy_map)
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(380, 0)
@@ -196,6 +206,11 @@ func _build_tabs() -> void:
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info_label.add_theme_font_size_override("font_size", 12)
 	side.add_child(info_label)
+	warn_label = Label.new()
+	warn_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	warn_label.add_theme_font_size_override("font_size", 12)
+	warn_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	side.add_child(warn_label)
 	travel_info_label = Label.new()
 	travel_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	travel_info_label.add_theme_font_size_override("font_size", 13)
@@ -530,6 +545,7 @@ func _start_game() -> void:
 	refresh_all()
 	if ship_body != null:
 		system_map.select_body(ship_body)
+	tabs.current_tab = TAB_RECRUTER
 
 func get_system(cell: Vector2i) -> StarSystem:
 	var key := "%d,%d" % [cell.x, cell.y]
@@ -911,6 +927,9 @@ func _on_cell_right_clicked(col: int, row: int) -> void:
 	_update_info_label()
 	_update_buttons()
 	_update_system_tab()
+
+func _on_cell_double_clicked(col: int, row: int) -> void:
+	_on_cell_clicked(col, row)
 	tabs.current_tab = 1
 
 func _update_system_tab() -> void:
@@ -967,19 +986,21 @@ func salaire_jour() -> int:
 func _update_info_label() -> void:
 	var pos_txt := "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	if destination.x < 0:
-		info_label.text = pos_txt + "\nCliquez sur une case de la carte galactique pour choisir une destination."
+		info_label.text = pos_txt + "\nClic gauche : choisir une destination · double-clic gauche : ouvrir la carte du système · clic droit : annuler la destination."
 		itineraire_label.text = _itineraire_txt()
+		warn_label.text = ""
 		return
 	var dest_sys := get_system(destination)
 	var named: Variant = GalaxyData.named_at(destination.x, destination.y)
 	var dest_name: String = named["nom"] if named != null else "case inconnue"
-	var extra := ""
 	if not can_travel():
-		extra = "\n/!\\ Voyager exige un Pilote ET une Vigie à leur poste." + _blocage_sante()
-	info_label.text = "%s\nDestination : %s — %s (%s)\nDistance : %s PC (1 case = 1 000 PC) · Vitesse : %d PC/j · Route : %s%s" % [
+		warn_label.text = "/!\\ Voyager exige un Pilote ET une Vigie à leur poste." + _blocage_sante()
+	else:
+		warn_label.text = ""
+	info_label.text = "%s\nDestination : %s — %s (%s)\nDistance : %s PC (1 case = 1 000 PC) · Vitesse : %d PC/j · Route : %s" % [
 		pos_txt,
 		dest_name, GalaxyData.coord_label(destination.x, destination.y), GalaxyData.coord_text(destination.x, destination.y),
-		MAUtils.fmt_int(distance), ship.vitesse_hyper_pc_j, dest_sys.route, extra,
+		MAUtils.fmt_int(distance), ship.vitesse_hyper_pc_j, dest_sys.route,
 	]
 	itineraire_label.text = _itineraire_txt()
 

@@ -120,6 +120,7 @@ func _ready() -> void:
 	add_child(sys_scroll)
 	sys_details = RichTextLabel.new()
 	sys_details.bbcode_enabled = true
+	sys_details.add_theme_font_size_override("font_size", 11)
 	sys_details.size_flags_horizontal = SIZE_EXPAND_FILL
 	sys_details.size_flags_vertical = SIZE_EXPAND_FILL
 	sys_details.scroll_active = true
@@ -132,7 +133,6 @@ func _ready() -> void:
 	add_child(right_top)
 	var btns := HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 8)
-	right_top.add_child(btns)
 	travel_button = Button.new()
 	travel_button.text = "Voyager vers ce corps"
 	travel_button.disabled = true
@@ -153,10 +153,12 @@ func _ready() -> void:
 	right_top.add_child(body_scroll)
 	body_details = RichTextLabel.new()
 	body_details.bbcode_enabled = true
+	body_details.add_theme_font_size_override("font_size", 11)
 	body_details.size_flags_horizontal = SIZE_EXPAND_FILL
 	body_details.size_flags_vertical = SIZE_EXPAND_FILL
 	body_details.scroll_active = true
 	body_scroll.add_child(body_details)
+	right_top.add_child(btns)
 	canvas = MapCanvas.new()
 	canvas.size_flags_horizontal = SIZE_EXPAND_FILL
 	canvas.size_flags_vertical = SIZE_EXPAND_FILL

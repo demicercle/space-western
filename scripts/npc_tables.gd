@@ -32,10 +32,10 @@ const DOMAINES_CARAC := {
 }
 
 const COMPETENCES := {
-	"Techniques": ["Acrobaties", "Armes d'épaule", "Armes de poing", "Armes embarquées", "Artisanat (au choix)", "Pilotage (au choix)"],
+	"Techniques": ["Acrobaties", "Armes d'épaule", "Armes de poing", "Armes embarquées", "Artisanat", "Pilotage"],
 	"Survie": ["Armes de jet", "Armes lourdes", "Athlétisme", "Mêlée"],
 	"Espionnage": ["Déguisement", "Discrétion", "Falsification", "Recherche", "Senseurs", "Systèmes de sécurité"],
-	"Sciences": ["Analyse", "Arts (au choix)", "Connaissance (au choix)", "Histoire", "Ingénierie", "Médecine", "Navigation", "Sciences solaires", "Sciences stellaires", "Stratégie"],
+	"Sciences": ["Analyse", "Arts", "Connaissance", "Histoire", "Ingénierie", "Médecine", "Navigation", "Sciences solaires", "Sciences stellaires", "Stratégie"],
 	"Négociation": ["Baratin", "Bureaucratie", "Comédie", "Commerce", "Danse", "Étiquette", "Jeux", "Séduction"],
 	"Trempe": ["Commandement", "Démolition", "Détermination", "Illégalités", "Intimidation", "Premiers soins", "Tactiques"],
 }
@@ -54,21 +54,21 @@ const PROFESSIONS := {
 	"Pilote": {"dom": ["Techniques", "Espionnage", "Sciences"], "comp": ["Pilotage (Vaisseau spatial)", "Senseurs", "Navigation", "Armes embarquées", "Analyse"]},
 	"Canonnier": {"dom": ["Techniques", "Survie", "Espionnage"], "comp": ["Armes embarquées", "Armes lourdes", "Senseurs", "Mêlée"]},
 	"Marchand": {"dom": ["Négociation", "Sciences", "Espionnage"], "comp": ["Commerce", "Baratin", "Étiquette", "Analyse", "Bureaucratie"]},
-	"Contrebandier": {"dom": ["Espionnage", "Négociation", "Techniques"], "comp": ["Discrétion", "Commerce", "Systèmes de sécurité", "Baratin", "Falsification", "Pilotage (au choix)"]},
+	"Contrebandier": {"dom": ["Espionnage", "Négociation", "Techniques"], "comp": ["Discrétion", "Commerce", "Systèmes de sécurité", "Baratin", "Falsification", "Pilotage"]},
 	"Fonctionnaire": {"dom": ["Négociation", "Sciences", "Espionnage"], "comp": ["Bureaucratie", "Étiquette", "Histoire", "Analyse", "Baratin"]},
-	"Noble solaire": {"dom": ["Négociation", "Sciences", "Trempe"], "comp": ["Étiquette", "Danse", "Histoire", "Commandement", "Baratin", "Connaissance (au choix)"]},
+	"Noble solaire": {"dom": ["Négociation", "Sciences", "Trempe"], "comp": ["Étiquette", "Danse", "Histoire", "Commandement", "Baratin", "Connaissance"]},
 	"Médecin": {"dom": ["Sciences", "Trempe", "Techniques"], "comp": ["Médecine", "Premiers soins", "Sciences stellaires", "Analyse", "Détermination"]},
-	"Scientifique": {"dom": ["Sciences", "Techniques", "Espionnage"], "comp": ["Sciences stellaires", "Analyse", "Ingénierie", "Connaissance (au choix)", "Navigation", "Histoire"]},
-	"Ingénieur / machiniste": {"dom": ["Sciences", "Techniques", "Trempe"], "comp": ["Ingénierie", "Artisanat (au choix)", "Analyse", "Armes embarquées", "Premiers soins"]},
+	"Scientifique": {"dom": ["Sciences", "Techniques", "Espionnage"], "comp": ["Sciences stellaires", "Analyse", "Ingénierie", "Connaissance", "Navigation", "Histoire"]},
+	"Ingénieur / machiniste": {"dom": ["Sciences", "Techniques", "Trempe"], "comp": ["Ingénierie", "Artisanat", "Analyse", "Armes embarquées", "Premiers soins"]},
 	"Force de l'ordre": {"dom": ["Espionnage", "Techniques", "Trempe"], "comp": ["Recherche", "Armes de poing", "Intimidation", "Systèmes de sécurité", "Discrétion", "Tactiques"]},
 	"Mercenaire": {"dom": ["Techniques", "Survie", "Trempe"], "comp": ["Armes d'épaule", "Armes de poing", "Mêlée", "Athlétisme", "Illégalités", "Intimidation"]},
 	"Barman / tenancier": {"dom": ["Négociation", "Espionnage", "Trempe"], "comp": ["Baratin", "Jeux", "Illégalités", "Recherche", "Séduction"]},
-	"Mineur / ouvrier": {"dom": ["Survie", "Techniques", "Trempe"], "comp": ["Athlétisme", "Ingénierie", "Artisanat (au choix)", "Mêlée", "Détermination"]},
-	"Agriculteur": {"dom": ["Survie", "Sciences", "Négociation"], "comp": ["Connaissance (au choix)", "Commerce", "Athlétisme", "Premiers soins"]},
+	"Mineur / ouvrier": {"dom": ["Survie", "Techniques", "Trempe"], "comp": ["Athlétisme", "Ingénierie", "Artisanat", "Mêlée", "Détermination"]},
+	"Agriculteur": {"dom": ["Survie", "Sciences", "Négociation"], "comp": ["Connaissance", "Commerce", "Athlétisme", "Premiers soins"]},
 	"Journaliste": {"dom": ["Espionnage", "Négociation", "Sciences"], "comp": ["Recherche", "Analyse", "Baratin", "Bureaucratie", "Discrétion"]},
-	"Artiste": {"dom": ["Sciences", "Négociation", "Trempe"], "comp": ["Arts (au choix)", "Comédie", "Danse", "Séduction", "Baratin"]},
-	"Religieux / gourou": {"dom": ["Sciences", "Trempe", "Négociation"], "comp": ["Connaissance (au choix)", "Commandement", "Détermination", "Comédie", "Étiquette"]},
-	"Pirate de l'espace": {"dom": ["Trempe", "Survie", "Techniques"], "comp": ["Armes d'épaule", "Mêlée", "Navigation", "Illégalités", "Baratin", "Pilotage (au choix)", "Détermination"]},
+	"Artiste": {"dom": ["Sciences", "Négociation", "Trempe"], "comp": ["Arts", "Comédie", "Danse", "Séduction", "Baratin"]},
+	"Religieux / gourou": {"dom": ["Sciences", "Trempe", "Négociation"], "comp": ["Connaissance", "Commandement", "Détermination", "Comédie", "Étiquette"]},
+	"Pirate de l'espace": {"dom": ["Trempe", "Survie", "Techniques"], "comp": ["Armes d'épaule", "Mêlée", "Navigation", "Illégalités", "Baratin", "Pilotage", "Détermination"]},
 }
 
 const TRAITS_DEFAUTS := [

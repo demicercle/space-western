@@ -36,6 +36,7 @@ func _ready() -> void:
 	sheet_label = RichTextLabel.new()
 	sheet_label.bbcode_enabled = true
 	sheet_label.fit_content = true
+	sheet_label.add_theme_font_size_override("font_size", 12)
 	sheet_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	vb1.add_child(sheet_label)
 	var p2 := PanelContainer.new()

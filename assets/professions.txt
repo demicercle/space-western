@@ -27,7 +27,7 @@ Marchand
 
 Contrebandier
   domaines : Espionnage (Perception), Négociation (Présence), Techniques (Agilité)
-  compétences : Discrétion, Commerce, Systèmes de sécurité, Baratin, Falsification, Pilotage (au choix)
+  compétences : Discrétion, Commerce, Systèmes de sécurité, Baratin, Falsification, Pilotage
 
 Fonctionnaire
   domaines : Négociation (Présence), Sciences (Intelligence), Espionnage (Perception)
@@ -35,7 +35,7 @@ Fonctionnaire
 
 Noble solaire
   domaines : Négociation (Présence), Sciences (Intelligence), Trempe (Sang-froid)
-  compétences : Étiquette, Danse, Histoire, Commandement, Baratin, Connaissance (au choix)
+  compétences : Étiquette, Danse, Histoire, Commandement, Baratin, Connaissance
 
 Médecin
   domaines : Sciences (Intelligence), Trempe (Sang-froid), Techniques (Agilité)
@@ -43,11 +43,11 @@ Médecin
 
 Scientifique
   domaines : Sciences (Intelligence), Techniques (Agilité), Espionnage (Perception)
-  compétences : Sciences stellaires, Analyse, Ingénierie, Connaissance (au choix), Navigation, Histoire
+  compétences : Sciences stellaires, Analyse, Ingénierie, Connaissance, Navigation, Histoire
 
 Ingénieur / machiniste
   domaines : Sciences (Intelligence), Techniques (Agilité), Trempe (Sang-froid)
-  compétences : Ingénierie, Artisanat (au choix), Analyse, Armes embarquées, Premiers soins
+  compétences : Ingénierie, Artisanat, Analyse, Armes embarquées, Premiers soins
 
 Force de l'ordre
   domaines : Espionnage (Perception), Techniques (Agilité), Trempe (Sang-froid)
@@ -63,11 +63,11 @@ Barman / tenancier
 
 Mineur / ouvrier
   domaines : Survie (Carrure), Techniques (Agilité), Trempe (Sang-froid)
-  compétences : Athlétisme, Ingénierie, Artisanat (au choix), Mêlée, Détermination
+  compétences : Athlétisme, Ingénierie, Artisanat, Mêlée, Détermination
 
 Agriculteur
   domaines : Survie (Carrure), Sciences (Intelligence), Négociation (Présence)
-  compétences : Connaissance (au choix), Commerce, Athlétisme, Premiers soins
+  compétences : Connaissance, Commerce, Athlétisme, Premiers soins
 
 Journaliste
   domaines : Espionnage (Perception), Négociation (Présence), Sciences (Intelligence)
@@ -75,13 +75,13 @@ Journaliste
 
 Artiste
   domaines : Sciences (Intelligence), Négociation (Présence), Trempe (Sang-froid)
-  compétences : Arts (au choix), Comédie, Danse, Séduction, Baratin
+  compétences : Arts, Comédie, Danse, Séduction, Baratin
 
 Religieux / gourou
   domaines : Sciences (Intelligence), Trempe (Sang-froid), Négociation (Présence)
-  compétences : Connaissance (au choix), Commandement, Détermination, Comédie, Étiquette
+  compétences : Connaissance, Commandement, Détermination, Comédie, Étiquette
 
 Pirate de l'espace
   domaines : Trempe (Sang-froid), Survie (Carrure), Techniques (Agilité)
-  compétences : Armes d'épaule, Mêlée, Navigation, Illégalités, Baratin, Pilotage (au choix), Détermination
+  compétences : Armes d'épaule, Mêlée, Navigation, Illégalités, Baratin, Pilotage, Détermination
 

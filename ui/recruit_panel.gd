@@ -8,6 +8,7 @@ const NIVEAUX := ["Normal", "Élite", "Héros", "Boss", "Big Boss"]
 
 var niveau_opt: OptionButton
 var profession_opt: OptionButton
+var prof_info: Label
 var trouver_btn: Button
 var recruter_btn: Button
 var card_holder: VBoxContainer
@@ -39,7 +40,14 @@ func _ready() -> void:
 	profession_opt.add_item("Aléatoire")
 	for p in NPCTables.PROFESSIONS.keys():
 		profession_opt.add_item(p)
+	profession_opt.item_selected.connect(_on_prof_selected)
 	opts.add_child(profession_opt)
+	prof_info = Label.new()
+	prof_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	prof_info.add_theme_font_size_override("font_size", 12)
+	prof_info.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
+	vb.add_child(prof_info)
+	_on_prof_selected(profession_opt.selected)
 	trouver_btn = Button.new()
 	trouver_btn.text = "Trouver une recrue"
 	trouver_btn.pressed.connect(_on_trouver)
@@ -57,15 +65,24 @@ func _ready() -> void:
 	recruter_btn.disabled = true
 	recruter_btn.pressed.connect(_on_recruter)
 	vb.add_child(recruter_btn)
-	var psep := HSeparator.new()
-	vb.add_child(psep)
-	var pl := Label.new()
-	pl.text = "Professions disponibles (export texte : assets/professions.txt) :"
-	pl.add_theme_font_size_override("font_size", 12)
-	pl.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
-	vb.add_child(pl)
-	var pc := ProfessionsCanvas.new()
-	vb.add_child(pc)
+
+func _on_prof_selected(idx: int) -> void:
+	if idx <= 0:
+		prof_info.text = "Aléatoire : la recrue aura n'importe quelle profession (liste complète exportée dans assets/professions.txt)."
+		return
+	var p: String = profession_opt.get_item_text(idx)
+	var d: Dictionary = NPCTables.PROFESSIONS.get(p, {})
+	var dom_txt := ""
+	for dname in d.get("dom", []):
+		if dom_txt != "":
+			dom_txt += ", "
+		dom_txt += "%s (%s)" % [dname, NPCTables.DOMAINES_CARAC.get(dname, "?")]
+	var comp_txt := ""
+	for cname in d.get("comp", []):
+		if comp_txt != "":
+			comp_txt += ", "
+		comp_txt += str(cname)
+	prof_info.text = "%s — domaines privilégiés : %s · compétences : %s" % [p, dom_txt, comp_txt]
 
 func _mk_label(t: String) -> Label:
 	var l := Label.new()
