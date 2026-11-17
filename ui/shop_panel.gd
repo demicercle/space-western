@@ -171,7 +171,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		if q <= 0.0001:
 			continue
 		var nl := Label.new()
-		nl.text = "%s ×%s — %s" % [ShopTables.nom_affiche(str(k)), MAUtils.fmt_num(q), ShopTables.tonnage_txt(q, ShopTables.place_de(str(k)))]
+		nl.text = "%s %s — %s" % [ShopTables.nom_affiche(str(k)), ShopTables.quantite_soute_txt(str(k), q), ShopTables.tonnage_txt(q, ShopTables.place_de(str(k)))]
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size = Vector2(120, 0)
 		nl.add_theme_font_size_override("font_size", 12)
@@ -187,6 +187,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var btn := Button.new()
 		btn.text = "Vendre"
 		btn.disabled = not docked or pv <= 0
+		btn.tooltip_text = "Vendre : popup « indiquer la quantité à vendre » (kg pour les marchandises, unités sinon)"
 		btn.pressed.connect(_on_sell.bind(str(k)))
 		soute_grid.add_child(btn)
 	for grid in grids:
@@ -242,7 +243,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var own := Label.new()
 		var q0: float = float(soute.get(nom, 0))
 		if q0 > 0.0001:
-			own.text = MAUtils.fmt_num(q0)
+			own.text = ShopTables.quantite_soute_txt(nom, q0)
 		own.add_theme_font_size_override("font_size", 12)
 		own.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 		grid.add_child(own)

@@ -71,6 +71,9 @@ var context_menu: PopupMenu
 var confirm_dialog: AcceptDialog
 var voyage_dialog: AcceptDialog
 var pending_voyage: Callable
+var sell_dialog: AcceptDialog
+var sell_edit: LineEdit
+var pending_sell := ""
 var pending_virer: Character = null
 var panel_style: StyleBoxFlat
 var ship_health_label: Label
@@ -303,6 +306,16 @@ func _build_context_menu() -> void:
 	voyage_dialog.get_ok_button().text = "Oui"
 	voyage_dialog.add_cancel_button("Non")
 	voyage_dialog.confirmed.connect(_on_voyage_dialog_confirmed)
+	sell_dialog = AcceptDialog.new()
+	add_child(sell_dialog)
+	sell_dialog.title = "Vendre"
+	sell_dialog.get_ok_button().text = "OK"
+	sell_dialog.add_cancel_button("Annuler")
+	sell_edit = LineEdit.new()
+	sell_edit.placeholder_text = "quantité à vendre"
+	sell_dialog.add_child(sell_edit)
+	sell_dialog.confirmed.connect(_on_sell_dialog_confirmed)
+	sell_dialog.canceled.connect(func() -> void: pending_sell = "")
 
 func _ask_voyage_confirm(text: String, action: Callable) -> void:
 	pending_voyage = action
@@ -640,16 +653,53 @@ func _on_sell(nom: String) -> void:
 	if prix <= 0:
 		ship_panel.set_message("%s est invendable ici (cours ×0 pour sa catégorie)." % nom)
 		return
-	if float(ship.cargaison[nom]) < 1.0:
-		ship_panel.set_message("Moins d'une UC de %s en soute : vente à l'unité impossible." % nom)
+	pending_sell = nom
+	var q: float = float(ship.cargaison[nom])
+	if ShopTables.est_marchandise(nom):
+		var kg_max := q * ShopTables.place_de(nom) * 1000.0
+		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en kg (1 UC = 1 000 kg). En soute : %s kg · prix de vente : %s €/UC." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(kg_max), MAUtils.fmt_int(prix)]
+		sell_edit.text = MAUtils.fmt_int(kg_max)
+	else:
+		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en unités. En soute : %s · prix de vente : %s €/u." % [ShopTables.nom_affiche(nom), MAUtils.fmt_num(q), MAUtils.fmt_int(prix)]
+		sell_edit.text = MAUtils.fmt_num(q)
+	sell_dialog.popup_centered()
+
+func _on_sell_dialog_confirmed() -> void:
+	var nom := pending_sell
+	pending_sell = ""
+	if nom == "" or not ship.cargaison.has(nom):
 		return
-	credits += prix
-	ship.cargaison[nom] = float(ship.cargaison[nom]) - 1.0
+	var q: float = float(ship.cargaison[nom])
+	var prix := ship_panel.prix_vente_unit(nom)
+	if prix <= 0:
+		ship_panel.set_message("%s est invendable ici (cours ×0 pour sa catégorie)." % nom)
+		return
+	var t := sell_edit.text.replace(" ", "").replace(",", ".")
+	var v := t.to_float()
+	if v <= 0.0:
+		ship_panel.set_message("Rien vendu (quantité nulle).")
+		return
+	var q_sold := 0.0
+	var qtxt := ""
+	if ShopTables.est_marchandise(nom):
+		var kg_max := q * ShopTables.place_de(nom) * 1000.0
+		var kg := minf(v, kg_max)
+		q_sold = kg / (ShopTables.place_de(nom) * 1000.0)
+		qtxt = "%s kg" % MAUtils.fmt_int(kg)
+	else:
+		q_sold = floor(minf(v, q))
+		qtxt = "×%d" % int(q_sold)
+	if q_sold <= 0.0001:
+		ship_panel.set_message("Rien vendu.")
+		return
+	var gain := int(round(prix * q_sold))
+	credits += gain
+	ship.cargaison[nom] = q - q_sold
 	if float(ship.cargaison[nom]) <= 0.0001:
 		ship.cargaison.erase(nom)
 	if nom == "Ration":
 		ship.rations = int(ship.cargaison.get("Ration", 0))
-	ship_panel.set_message("Vendu : 1 × %s pour %s €." % [nom, MAUtils.fmt_int(prix)])
+	ship_panel.set_message("Vendu : %s %s pour %s €." % [ShopTables.nom_affiche(nom), qtxt, MAUtils.fmt_int(gain)])
 	refresh_all()
 
 func a_astroport() -> bool:

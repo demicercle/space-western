@@ -142,7 +142,7 @@ func set_ship(s: Ship) -> void:
 		var q: float = float(s.cargaison[k])
 		var lbl := Label.new()
 		lbl.size_flags_horizontal = SIZE_EXPAND_FILL
-		lbl.text = "%s ×%s — tonnage : %s (achat de base %s €/u)" % [k, MAUtils.fmt_num(q), ShopTables.tonnage_txt(q, ShopTables.place_de(k)), MAUtils.fmt_int(prix_base(k))]
+		lbl.text = "%s %s — tonnage : %s (achat de base %s €/u)" % [k, ShopTables.quantite_soute_txt(k, q), ShopTables.tonnage_txt(q, ShopTables.place_de(k)), MAUtils.fmt_int(prix_base(k))]
 		lbl.add_theme_font_size_override("font_size", 12)
 		row.add_child(lbl)
 		var pl := Label.new()

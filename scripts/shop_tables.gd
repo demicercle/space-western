@@ -148,6 +148,14 @@ static func tonnage_txt(q: float, place: float) -> String:
 		return "%s kg" % MAUtils.fmt_int(t * 1000.0)
 	return "%s UC" % MAUtils.fmt_num(t)
 
+static func est_marchandise(nom: String) -> bool:
+	return find_marchandise(nom) != null
+
+static func quantite_soute_txt(nom: String, q: float) -> String:
+	if est_marchandise(nom):
+		return "×%s kg" % MAUtils.fmt_int(q * place_de(nom) * 1000.0)
+	return "×%s" % MAUtils.fmt_num(q)
+
 static func find_marchandise(nom: String) -> Variant:
 	return find_in(MARCHANDISES, nom)
 
