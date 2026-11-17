@@ -38,34 +38,44 @@ func _ready() -> void:
 	msg_label.add_theme_font_size_override("font_size", 12)
 	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	add_child(msg_label)
+	var hb := HBoxContainer.new()
+	hb.size_flags_horizontal = SIZE_EXPAND_FILL
+	hb.size_flags_vertical = SIZE_EXPAND_FILL
+	hb.add_theme_constant_override("separation", 8)
+	add_child(hb)
 	canvas = MapCanvas.new()
 	canvas.panel = self
 	canvas.size_flags_horizontal = SIZE_EXPAND_FILL
 	canvas.size_flags_vertical = SIZE_EXPAND_FILL
 	canvas.custom_minimum_size = Vector2(300, 300)
 	canvas.mouse_filter = MOUSE_FILTER_STOP
-	add_child(canvas)
-	legend_label = Label.new()
-	legend_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	legend_label.add_theme_font_size_override("font_size", 11)
-	legend_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
-	add_child(legend_label)
+	hb.add_child(canvas)
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(380, 0)
+	side.size_flags_vertical = SIZE_EXPAND_FILL
+	side.add_theme_constant_override("separation", 6)
+	hb.add_child(side)
 	info_label = Label.new()
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info_label.add_theme_font_size_override("font_size", 12)
 	info_label.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
-	add_child(info_label)
+	side.add_child(info_label)
 	btn_fouiller = Button.new()
 	btn_fouiller.text = "Fouiller (1 jour)"
 	btn_fouiller.visible = false
 	btn_fouiller.tooltip_text = "Action « Fouiller » : 1 jour, un test de Recherche par article du tableau selon le type de site"
 	btn_fouiller.pressed.connect(_on_fouiller_pressed)
-	add_child(btn_fouiller)
+	side.add_child(btn_fouiller)
 	fouille_label = Label.new()
 	fouille_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	fouille_label.add_theme_font_size_override("font_size", 12)
 	fouille_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.7))
-	add_child(fouille_label)
+	side.add_child(fouille_label)
+	legend_label = Label.new()
+	legend_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	legend_label.add_theme_font_size_override("font_size", 11)
+	legend_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	side.add_child(legend_label)
 
 func set_fouille_result(txt: String) -> void:
 	fouille_label.text = txt

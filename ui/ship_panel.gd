@@ -3,7 +3,8 @@ extends HBoxContainer
 
 var sheet_label: RichTextLabel
 var hold_label: RichTextLabel
-var hold_list: VBoxContainer
+var soute_bar: ProgressBar
+var hold_list: GridContainer
 var hold_msg: Label
 var cours: Dictionary = {"A": 1.0, "B": 1.0, "C": 1.0}
 var docked := false
@@ -59,13 +60,21 @@ func _ready() -> void:
 	hold_label.fit_content = true
 	hold_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	vb2.add_child(hold_label)
+	soute_bar = ProgressBar.new()
+	soute_bar.custom_minimum_size = Vector2(0, 18)
+	soute_bar.min_value = 0.0
+	soute_bar.max_value = 100.0
+	soute_bar.show_percentage = true
+	vb2.add_child(soute_bar)
 	hold_msg = Label.new()
 	hold_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hold_msg.add_theme_font_size_override("font_size", 11)
 	hold_msg.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	vb2.add_child(hold_msg)
-	hold_list = VBoxContainer.new()
-	hold_list.add_theme_constant_override("separation", 3)
+	hold_list = GridContainer.new()
+	hold_list.columns = 2
+	hold_list.add_theme_constant_override("h_separation", 12)
+	hold_list.add_theme_constant_override("v_separation", 3)
 	hold_list.size_flags_horizontal = SIZE_EXPAND_FILL
 	vb2.add_child(hold_list)
 
@@ -102,6 +111,8 @@ func set_ship(s: Ship) -> void:
 	if s == null:
 		sheet_label.text = ""
 		hold_label.text = ""
+		if soute_bar != null:
+			soute_bar.value = 0.0
 		return
 	var bb := "[b][color=gold]%s[/color][/b] — %s\n" % [s.nom, s.modele]
 	if s.description != "":
@@ -126,31 +137,36 @@ func set_ship(s: Ship) -> void:
 	sheet_label.text = bb
 	var hb := "[b]Réserve de Radix[/b] : %s / %s PC — plein : %s €/1 000 PC (planète ×0,75, station-relais ×1,5 le tonnage ; ici %s €/1 000 PC)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_num(s.tonnage * 0.75), MAUtils.fmt_num(radix_unit_price)]
 	hb += "[b]Rations[/b] : %d (+%d repas, consommés en priorité) — 1 par personne et par jour de voyage\n" % [s.rations, int(s.cargaison.get("Repas", 0))]
-	hb += "[b]Soute[/b] : %s / %s UC · cours de vente : A ×%s · B ×%s · C ×%s · prix de vente = prix d'achat ÷ 1,5 (occasion)%s\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute), MAUtils.fmt_num(cours.get("A", 1.0)), MAUtils.fmt_num(cours.get("B", 1.0)), MAUtils.fmt_num(cours.get("C", 1.0)), "" if docked else " (vente indisponible ici)"]
+	hb += "[b]Poids en soute[/b] : %s t / %s t · cours de vente : A ×%s · B ×%s · C ×%s · prix de vente = prix d'achat ÷ 1,5 (occasion)%s\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute), MAUtils.fmt_num(cours.get("A", 1.0)), MAUtils.fmt_num(cours.get("B", 1.0)), MAUtils.fmt_num(cours.get("C", 1.0)), "" if docked else " (vente indisponible ici)"]
 	hold_label.text = hb
+	if soute_bar != null:
+		soute_bar.value = 100.0 * soute_used() / maxf(1.0, float(s.soute))
 	for ch in hold_list.get_children():
 		hold_list.remove_child(ch)
 		ch.queue_free()
+	hold_list.add_child(_hold_header("Nom de l'article"))
+	hold_list.add_child(_hold_header("Quantité"))
 	var keys := s.cargaison.keys()
 	keys.sort()
 	for k in keys:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		var pv := prix_vente_unit(k)
-		var it0: Variant = ShopTables.find_item(str(k))
-		var c0: float = float(cours.get(str(it0.get("dispo", "C")) if it0 != null else "C", 1.0))
 		var q: float = float(s.cargaison[k])
-		var lbl := Label.new()
-		lbl.size_flags_horizontal = SIZE_EXPAND_FILL
-		lbl.text = "%s %s — tonnage : %s (achat de base %s €/u)" % [k, ShopTables.quantite_soute_txt(k, q), ShopTables.tonnage_txt(q, ShopTables.place_de(k)), MAUtils.fmt_int(prix_base(k))]
-		lbl.add_theme_font_size_override("font_size", 12)
-		row.add_child(lbl)
-		var pl := Label.new()
-		pl.text = ("vente : invendable (cours ×0)" if pv <= 0 else "vente : %s €/u" % MAUtils.fmt_int(pv))
-		pl.add_theme_font_size_override("font_size", 12)
-		pl.add_theme_color_override("font_color", ShopPanel._couleur_prix(c0))
-		row.add_child(pl)
-		hold_list.add_child(row)
+		if q <= 0.0001:
+			continue
+		var nl := Label.new()
+		nl.text = ShopTables.nom_affiche(str(k))
+		nl.add_theme_font_size_override("font_size", 12)
+		hold_list.add_child(nl)
+		var ql := Label.new()
+		ql.text = "%s · %s" % [ShopTables.quantite_soute_txt(str(k), q), ShopTables.tonnage_txt(q, ShopTables.place_de(str(k)))]
+		ql.add_theme_font_size_override("font_size", 12)
+		hold_list.add_child(ql)
+
+func _hold_header(t: String) -> Label:
+	var l := Label.new()
+	l.text = t
+	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
+	return l
 
 func set_message(t: String) -> void:
 	hold_msg.text = t
