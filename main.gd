@@ -155,7 +155,7 @@ func _build_left_panel() -> void:
 	captain_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	left_vbox.add_child(captain_label)
 	var pl := Label.new()
-	pl.text = "Postes à bord (glisser-déposer un personnage ; clic = fiche ; clic droit = menu) :"
+	pl.text = "Postes à bord :"
 	pl.add_theme_font_size_override("font_size", 12)
 	pl.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1370,7 +1370,7 @@ func _on_recruit_found(c: Character) -> void:
 	avancer_heure(1)
 	recruit_panel.show_recrue(c)
 	refresh_all()
-	recruit_panel.set_message("Recrue trouvée (action de 1 h) — calendrier : %s, %d h · %d jour(s) écoulé(s)." % [MAUtils.galdate(jours_ecoules), heure_jour, jours_ecoules])
+	recruit_panel.set_message("Recrue trouvée (1 h) — calendrier : %s, %d h · %d jour(s) écoulé(s)." % [MAUtils.galdate(jours_ecoules), heure_jour, jours_ecoules])
 
 func _on_recruit_hired(c: Character) -> void:
 	if not peut_recruter():
@@ -1395,7 +1395,7 @@ func _on_recruit_hired(c: Character) -> void:
 func refresh_all() -> void:
 	calendar_label.text = "Calendrier galactique : %s · %d h · année %s" % [MAUtils.galdate(jours_ecoules), heure_jour, MAUtils.fmt_int(MAUtils.annee_galactique(jours_ecoules))]
 	jours_label.text = "Jours écoulés depuis le premier jour : %d" % jours_ecoules
-	ship_name_label.text = "Vaisseau : %s (%s)" % [ship.nom, ship.modele]
+	ship_name_label.text = "%s (%s)" % [ship.nom, ship.modele]
 	pos_label.text = "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	refresh_ship_health()
 	radix_label.text = "Radix : %s / %s PC" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]

@@ -59,7 +59,7 @@ static func make_card(c: Character, is_captain := false) -> PanelContainer:
 	var sep := HSeparator.new()
 	vb.add_child(sep)
 	var cl := Label.new()
-	cl.text = "Caractéristiques & compétences (6 colonnes : 1 colonne = 1 caractéristique = 1 domaine = ses compétences ; +0 en grisé)"
+	cl.text = "Caractéristiques & Compétences"
 	cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cl.add_theme_font_size_override("font_size", 12)
 	vb.add_child(cl)
@@ -138,4 +138,3 @@ func _refresh_card() -> void:
 		card_holder.add_child(l)
 		return
 	card_holder.add_child(make_card(selected, selected == captain))
-
