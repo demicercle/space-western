@@ -155,11 +155,11 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	if est_relais:
 		search_button.tooltip_text = "Comptoir OCG : tarifs fixes, pas de recherche nécessaire"
 	elif not p_docked:
-		search_button.tooltip_text = "Recherche impossible : scannez le corps et détectez un astroport"
+		search_button.tooltip_text = "Recherche impossible ici (commerce indisponible sur ce corps)"
 	else:
 		search_button.tooltip_text = "Le capitaine teste chaque article (Commerce, ou Illégalités si illégal) — l'action consomme 1 jour (MdJ p271)"
 	title_label.text = titre
-	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible : scannez le corps pour détecter un astroport)"]
+	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible ici)"]
 	_clear_grid(soute_grid)
 	soute_grid.add_child(_header_cell("Soute"))
 	soute_grid.add_child(_header_cell("Prix de vente"))

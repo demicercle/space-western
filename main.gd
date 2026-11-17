@@ -658,6 +658,18 @@ func peut_commercer() -> bool:
 	var c := cours_actuel()
 	return float(c["A"]) > 0.0 or float(c["B"]) > 0.0 or float(c["C"]) > 0.0
 
+func raison_commerce() -> String:
+	if not docked():
+		if ship_body == null:
+			return "le vaisseau n'est pas en orbite autour d'un corps céleste (planète ou station)"
+		return "on ne peut pas s'amarrer sur un corps de type « %s »" % str(ship_body.get("type", "?"))
+	if not a_astroport():
+		return "ce corps ne possède pas d'astroport (même rudimentaire)"
+	var c := cours_actuel()
+	if float(c["A"]) <= 0.0 and float(c["B"]) <= 0.0 and float(c["C"]) <= 0.0:
+		return "aucun cours des marchandises n'est indiqué sur ce corps (A/B/C à ×0)"
+	return ""
+
 func peut_recruter() -> bool:
 	if not docked() or not a_astroport():
 		return false
@@ -1006,12 +1018,9 @@ func _update_buttons() -> void:
 	plein_button.disabled = not dk or ship.radix_pc >= ship.autonomie_pc
 	calc_button.disabled = destination.x < 0 or not can_travel()
 	recruit_panel.set_enabled_state(peut_recruter(), credits, characters.size(), ship.passagers_max)
-	if not dk:
-		shop_panel.set_message("Commerce impossible, trouvez une station-relais ou une planète commerciale.")
-	elif not a_astroport():
-		shop_panel.set_message("Commerce impossible : ce corps ne possède pas d'astroport (même rudimentaire).")
-	elif not peut_commercer():
-		shop_panel.set_message("Commerce impossible ici : cours A/B/C tous à ×0 sur ce corps.")
+	var raison := raison_commerce()
+	if raison != "":
+		shop_panel.set_message("Commerce impossible : %s." % raison)
 	var pe := peut_explorer()
 	tabs.set_tab_disabled(6, not pe)
 	if tabs.current_tab == 6:

@@ -128,7 +128,7 @@ func set_ship(s: Ship) -> void:
 	sheet_label.text = bb
 	var hb := "[b]Réserve de Radix[/b] : %s / %s PC — plein : %s €/1 000 PC (planète ×0,75, station-relais ×1,5 le tonnage ; ici %s €/1 000 PC)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_num(s.tonnage * 0.75), MAUtils.fmt_num(radix_unit_price)]
 	hb += "[b]Rations[/b] : %d (+%d repas, consommés en priorité) — 1 par personne et par jour de voyage\n" % [s.rations, int(s.cargaison.get("Repas", 0))]
-	hb += "[b]Soute[/b] : %s / %s UC · cours de vente : A ×%s · B ×%s · C ×%s · prix de vente = prix d'achat ÷ 1,5 (occasion)%s\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute), MAUtils.fmt_num(cours.get("A", 1.0)), MAUtils.fmt_num(cours.get("B", 1.0)), MAUtils.fmt_num(cours.get("C", 1.0)), "" if docked else " (vente indisponible : scannez le corps pour détecter un astroport)"]
+	hb += "[b]Soute[/b] : %s / %s UC · cours de vente : A ×%s · B ×%s · C ×%s · prix de vente = prix d'achat ÷ 1,5 (occasion)%s\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute), MAUtils.fmt_num(cours.get("A", 1.0)), MAUtils.fmt_num(cours.get("B", 1.0)), MAUtils.fmt_num(cours.get("C", 1.0)), "" if docked else " (vente indisponible ici)"]
 	hold_label.text = hb
 	for ch in hold_list.get_children():
 		hold_list.remove_child(ch)
@@ -154,7 +154,7 @@ func set_ship(s: Ship) -> void:
 		var btn := Button.new()
 		btn.text = "Vendre"
 		btn.disabled = not docked or pv <= 0
-		btn.tooltip_text = "Vendre 1 unité (prix de vente = achat ÷ 1,5)" if (docked and pv > 0) else ("Invendable ici (cours ×0)" if docked else "Vente indisponible : scannez le corps pour détecter un astroport")
+		btn.tooltip_text = "Vendre 1 unité (prix de vente = achat ÷ 1,5)" if (docked and pv > 0) else ("Invendable ici (cours ×0)" if docked else "Vente indisponible ici")
 		btn.pressed.connect(_on_sell.bind(k))
 		row.add_child(btn)
 		hold_list.add_child(row)
