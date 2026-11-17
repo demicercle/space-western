@@ -597,7 +597,7 @@ func _on_buy(it: Dictionary) -> void:
 	var prix := ShopTables.prix_achat(it, cours_actuel())
 	var place: float = float(it["place"])
 	if not peut_commercer():
-		shop_panel.set_message("Commerce indisponible ici : corps non scanné, aucun astroport détecté ou cours ×0.")
+		shop_panel.set_message("Commerce indisponible ici : pas d'astroport sur ce corps (même rudimentaire) ou cours ×0.")
 		return
 	if prix < 0:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), str(it["nom"])])
@@ -617,7 +617,7 @@ func _on_buy(it: Dictionary) -> void:
 
 func _on_sell(nom: String) -> void:
 	if not peut_commercer():
-		ship_panel.set_message("Vente indisponible ici : corps non scanné, aucun astroport détecté ou cours ×0.")
+		ship_panel.set_message("Vente indisponible ici : pas d'astroport sur ce corps (même rudimentaire) ou cours ×0.")
 		return
 	if not ship.cargaison.has(nom) or int(ship.cargaison[nom]) <= 0:
 		return
@@ -634,22 +634,22 @@ func _on_sell(nom: String) -> void:
 	ship_panel.set_message("Vendu : 1 × %s pour %s €." % [nom, MAUtils.fmt_int(prix)])
 	refresh_all()
 
-func body_scan_ok() -> bool:
+func a_astroport() -> bool:
 	if ship_body == null:
 		return false
-	var sc: Variant = ship_body.get("scan", null)
-	if sc == null or not bool(sc.get("ok", false)):
-		return false
-	return bool(sc.get("astroport", false))
+	if ship_body["type"] == "station":
+		return true
+	var ap: String = str(ship_body.get("astroport", ""))
+	return ap != "" and not ap.begins_with("aucun")
 
 func peut_commercer() -> bool:
-	if not docked() or not body_scan_ok():
+	if not docked() or not a_astroport():
 		return false
 	var c := cours_actuel()
 	return float(c["A"]) > 0.0 or float(c["B"]) > 0.0 or float(c["C"]) > 0.0
 
 func peut_recruter() -> bool:
-	if not docked() or not body_scan_ok():
+	if not docked() or not a_astroport():
 		return false
 	return ship_body["type"] == "station" or bool(ship_body.get("habitee", false))
 
@@ -724,7 +724,7 @@ func _on_scanner() -> void:
 	refresh_all()
 func _on_rechercher() -> void:
 	if not peut_commercer():
-		shop_panel.set_message("Recherche impossible : scannez ce corps (bouton « Scanner ») et détectez un astroport, avec au moins un cours > 0.")
+		shop_panel.set_message("Recherche impossible : pas d'astroport sur ce corps (même rudimentaire) ou cours A/B/C tous à ×0.")
 		return
 	if current_system != null and current_system.est_relais:
 		shop_panel.set_message("Comptoir OCG de la station-relais : tarifs fixes, pas besoin de chercher.")
@@ -778,7 +778,7 @@ func _on_rechercher() -> void:
 			diff += 1
 			mods += " D+1 (dispo A)"
 		var cat: String = str(it.get("cat", ""))
-		if (cat == "Technologie militaire" or cat == "Technologie spatiale") and base_prix > 100:
+		if (cat == "Militaire" or cat == "Technologie spatiale") and base_prix > 100:
 			diff += 1
 			mods += " D+1 (%s, prix > 100 €)" % cat.to_lower()
 		if est_pauvre:
@@ -1011,8 +1011,8 @@ func _update_buttons() -> void:
 	recruit_panel.set_enabled_state(peut_recruter(), credits, characters.size(), ship.passagers_max)
 	if not dk:
 		shop_panel.set_message("Commerce impossible, trouvez une station-relais ou une planète commerciale.")
-	elif not body_scan_ok():
-		shop_panel.set_message("Commerce impossible : scannez ce corps (bouton « Scanner » dans la carte de système) pour détecter un astroport.")
+	elif not a_astroport():
+		shop_panel.set_message("Commerce impossible : ce corps ne possède pas d'astroport (même rudimentaire).")
 	elif not peut_commercer():
 		shop_panel.set_message("Commerce impossible ici : cours A/B/C tous à ×0 sur ce corps.")
 
@@ -1395,7 +1395,7 @@ func _on_recruit_found(c: Character) -> void:
 
 func _on_recruit_hired(c: Character) -> void:
 	if not peut_recruter():
-		recruit_panel.set_message("Recrutement impossible ici : scannez le corps (astroport détecté requis) — planète habitée ou station.")
+		recruit_panel.set_message("Recrutement impossible ici : il faut un astroport (même rudimentaire) sur le corps — planète habitée ou station.")
 		return
 	if characters.size() >= ship.passagers_max:
 		recruit_panel.set_message("Le vaisseau est plein (%d/%d)." % [characters.size(), ship.passagers_max])
@@ -1466,7 +1466,7 @@ func refresh_all() -> void:
 		titre = "Commerce — planète %s (catalogue MdJ p234-243 + marchandises p233 ; %d article(s) trouvé(s))" % [sys_nom, articles_trouves.size()]
 	else:
 		items = []
-		titre = "Commerce — %s (scannez le corps pour détecter un astroport)" % sys_nom
+		titre = "Commerce — %s (pas d'astroport sur ce corps)" % sys_nom
 	_update_info_label()
 	_update_buttons()
 	shop_panel.set_catalog(items, titre, credits, soute_used(), ship.soute, pc, cours_txt(), cours_actuel(), est_rel, ship.cargaison)

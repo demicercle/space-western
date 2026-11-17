@@ -5,7 +5,7 @@ signal buy_requested(item: Dictionary)
 signal search_requested
 signal sell_requested(nom: String)
 
-const TAB_TITLES := ["Marchandises", "Technologie courante", "Technologie militaire", "Technologie médicale", "La belle vie"]
+const TAB_TITLES := ["Marchandises", "Courant", "Militaire", "Médical", "Luxe"]
 
 var title_label: Label
 var info_label: Label
@@ -41,13 +41,13 @@ static func _desc_txt(it: Dictionary) -> String:
 	return d + " — " + meta
 
 static func _tab_of(cat: String) -> int:
-	if cat == "Technologie militaire":
+	if cat == "Militaire":
 		return 2
-	if cat == "Technologie médicale":
+	if cat == "Médical":
 		return 3
-	if cat == "Technologie courante" or cat == "Station-relais":
+	if cat == "Courant" or cat == "Station-relais":
 		return 1
-	if cat == "La belle vie":
+	if cat == "Luxe":
 		return 4
 	return 0
 
