@@ -86,7 +86,6 @@ func _ready() -> void:
 	_setup_theme()
 	_build_left_panel()
 	_build_tabs()
-	_build_main_layout()
 	_build_context_menu()
 	_build_pause_menu()
 	pause_button.pressed.connect(_toggle_pause_menu)
@@ -224,6 +223,15 @@ func _build_tabs() -> void:
 	msg_label.add_theme_font_size_override("font_size", 11)
 	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	side.add_child(msg_label)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	side.add_child(scroll)
+	journal = RichTextLabel.new()
+	journal.bbcode_enabled = true
+	journal.size_flags_horizontal = SIZE_EXPAND_FILL
+	journal.size_flags_vertical = SIZE_EXPAND_FILL
+	journal.scroll_active = true
+	scroll.add_child(journal)
 
 	system_map = SystemMap.new()
 	system_map.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -252,38 +260,6 @@ func _build_tabs() -> void:
 	tabs.get_child(5).add_child(recruit_panel)
 	recruit_panel.recruit_found.connect(_on_recruit_found)
 	recruit_panel.recruit_hired.connect(_on_recruit_hired)
-
-func _build_main_layout() -> void:
-	var hsplit: HSplitContainer = left_vbox.get_parent().get_parent()
-	var rv: VBoxContainer = tabs.get_parent().get_parent()
-	var main_hb := HBoxContainer.new()
-	main_hb.add_theme_constant_override("separation", 8)
-	main_hb.size_flags_horizontal = SIZE_EXPAND_FILL
-	main_hb.size_flags_vertical = SIZE_EXPAND_FILL
-	hsplit.add_child(main_hb)
-	hsplit.remove_child(rv)
-	rv.size_flags_horizontal = SIZE_EXPAND_FILL
-	rv.size_flags_vertical = SIZE_EXPAND_FILL
-	main_hb.add_child(rv)
-	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(370, 0)
-	side.add_theme_constant_override("separation", 4)
-	main_hb.add_child(side)
-	var jh := Label.new()
-	jh.text = "Journal de bord :"
-	jh.add_theme_font_size_override("font_size", 13)
-	jh.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
-	side.add_child(jh)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = SIZE_EXPAND_FILL
-	scroll.size_flags_horizontal = SIZE_EXPAND_FILL
-	side.add_child(scroll)
-	journal = RichTextLabel.new()
-	journal.bbcode_enabled = true
-	journal.size_flags_horizontal = SIZE_EXPAND_FILL
-	journal.size_flags_vertical = SIZE_EXPAND_FILL
-	journal.scroll_active = true
-	scroll.add_child(journal)
 
 func _build_context_menu() -> void:
 	context_menu = PopupMenu.new()
