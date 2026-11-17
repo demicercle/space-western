@@ -649,6 +649,8 @@ func a_astroport() -> bool:
 		return false
 	if ship_body["type"] == "station":
 		return true
+	if ship_body["type"] == "géante gazeuse":
+		return false
 	var ap: String = str(ship_body.get("astroport", ""))
 	return ap != "" and not ap.begins_with("aucun")
 
@@ -658,6 +660,8 @@ func station_orbitale_habitee() -> bool:
 	for c in current_system.corps:
 		if str(c.get("type", "")) == "station" and bool(c.get("habitee", false)):
 			return true
+	if ship_body != null and str(ship_body.get("systeme_orbital", "")).contains("station orbitale"):
+		return true
 	return false
 
 func raison_commerce() -> String:

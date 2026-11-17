@@ -32,6 +32,9 @@ static func _nom_corps(orbite: int, sys: StarSystem) -> String:
 		return "%s %s" % [sys.nom, romains[mini(5, orbite / 10)]]
 	return MAUtils.pick(["Nueva ", "Puerto ", "San ", "Villa ", "Cabo ", "Costa "]) + sys.nom.substr(0, 1).to_upper() + MAUtils.pick(["lata", "mbral", "dor", "vena", "ciaga", "ruena", "milla", "stela"])
 
+static func _nom_station() -> String:
+	return MAUtils.pick(["Terminus", "Port Stellare", "Relais Oreste", "Station Varda", "Kallon", "Esperanza", "Faro", "Ancla"])
+
 static func _mod_distance(o: int) -> String:
 	if o <= 1:
 		return "0,5×1d"
@@ -161,6 +164,8 @@ static func _gen_corps(orbite: int, sys: StarSystem) -> Dictionary:
 		c["habitee"] = false
 		var n_sat := 1 + randi() % 3
 		c["systeme_orbital"] = "%d satellite%s naturel%s%s" % [n_sat, "s" if n_sat > 1 else "", "s" if n_sat > 1 else "", " ; usine d'exploitation de gaz en orbite" if randf() < 0.5 else ""]
+		if randf() < 0.4:
+			c["systeme_orbital"] += " ; %s (station orbitale habitée)" % _nom_station()
 		c["population"] = "aucune population humaine"
 		c["niveau_techno"] = "-"
 		c["gouvernement"] = "aucun"
@@ -255,6 +260,9 @@ static func _gen_corps(orbite: int, sys: StarSystem) -> Dictionary:
 		c["securite"] = "aucune patrouille"
 	var n_sat := randi() % 4
 	c["systeme_orbital"] = "aucun" if n_sat == 0 else "%d satellite%s naturel%s (gravité faible (+1d), sans atmosphère ni plans d'eau)" % [n_sat, "s" if n_sat > 1 else "", "s" if n_sat > 1 else ""]
+	if c.get("habitee", false) and randf() < 0.35:
+		var st := "%s (station orbitale habitée)" % _nom_station()
+		c["systeme_orbital"] = st if c["systeme_orbital"] == "aucun" else c["systeme_orbital"] + " ; " + st
 	var env0: String = c["environnement"].split(" ; ")[0]
 	c["couleur"] = MAUtils.pick(SystemTables.COULEUR_ENV.get(env0, SystemTables.COULEURS.keys()))
 	c["description"] = "Une sphère %s de %s de diamètre. %s" % [c["couleur"], c["diametre"], "Habité." if c["habitee"] else ("Monde sauvage, atmosphère respirable." if c["atmosphere"] == "respirable" else "Atmosphère hostile : scaphandre obligatoire.")]
