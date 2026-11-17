@@ -1,9 +1,6 @@
 class_name ExplorePanel
 extends VBoxContainer
 
-signal recup_requested(site: String, trouvaille: String, recharge: String)
-signal remettre_requested(produit: String)
-
 class MapCanvas extends Control:
 	var panel: ExplorePanel
 	func _gui_input(event: InputEvent) -> void:
@@ -18,13 +15,6 @@ var msg_label: Label
 var canvas: MapCanvas
 var legend_label: Label
 var info_label: Label
-var site_opt: OptionButton
-var trouv_opt: OptionButton
-var recharge_opt: OptionButton
-var btn_recup: Button
-var remise_opt: OptionButton
-var btn_remettre: Button
-var recup_label: Label
 var map := {}
 var selected := -1
 var centres: Array = []
@@ -60,88 +50,8 @@ func _ready() -> void:
 	info_label.add_theme_font_size_override("font_size", 12)
 	info_label.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 	add_child(info_label)
-	var sep := HSeparator.new()
-	add_child(sep)
-	var sh := Label.new()
-	sh.text = "Récupération (La Guerre et la Désolation, p. 14-17)"
-	sh.add_theme_font_size_override("font_size", 13)
-	sh.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
-	add_child(sh)
-	var hb1 := HBoxContainer.new()
-	hb1.add_theme_constant_override("separation", 8)
-	add_child(hb1)
-	site_opt = OptionButton.new()
-	site_opt.add_item("Aucun site connu sur ce corps")
-	site_opt.size_flags_horizontal = SIZE_EXPAND_FILL
-	hb1.add_child(site_opt)
-	trouv_opt = OptionButton.new()
-	for t in SalvageTables.TROUVAILLES:
-		trouv_opt.add_item(t)
-	trouv_opt.size_flags_horizontal = SIZE_EXPAND_FILL
-	hb1.add_child(trouv_opt)
-	recharge_opt = OptionButton.new()
-	for r in SalvageTables.RECHARGES_LBL:
-		recharge_opt.add_item(r)
-	hb1.add_child(recharge_opt)
-	btn_recup = Button.new()
-	btn_recup.text = "Récoup ! (1 jour)"
-	btn_recup.tooltip_text = "Action « Récoup ! » : test de Recherche, difficulté 1 + modificateur du site/trouvaille"
-	btn_recup.pressed.connect(_on_recup_pressed)
-	hb1.add_child(btn_recup)
-	var hb2 := HBoxContainer.new()
-	hb2.add_theme_constant_override("separation", 8)
-	add_child(hb2)
-	remise_opt = OptionButton.new()
-	for p in SalvageTables.PRODUITS.keys():
-		remise_opt.add_item(p)
-	remise_opt.size_flags_horizontal = SIZE_EXPAND_FILL
-	hb2.add_child(remise_opt)
-	btn_remettre = Button.new()
-	btn_remettre.text = "Remettre à neuf (1 jour)"
-	btn_remettre.tooltip_text = "Action « Remettre à neuf » : test d'Ingénierie (vaisseau/véhicule) ou de Technologie — les composants ne sont consommés qu'en cas de succès"
-	btn_remettre.pressed.connect(_on_remettre_pressed)
-	hb2.add_child(btn_remettre)
-	recup_label = Label.new()
-	recup_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	recup_label.add_theme_font_size_override("font_size", 11)
-	recup_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
-	add_child(recup_label)
 
-func _on_recup_pressed() -> void:
-	var site: String = site_opt.get_item_text(site_opt.selected).replace(" (E)", "")
-	var recharge: String = SalvageTables.RECHARGES[recharge_opt.selected] if recharge_opt.selected >= 0 else "blaster"
-	recup_requested.emit(site, trouv_opt.get_item_text(trouv_opt.selected), recharge)
-
-func _on_remettre_pressed() -> void:
-	remettre_requested.emit(remise_opt.get_item_text(remise_opt.selected))
-
-static func _recup_txt(recup: Dictionary) -> String:
-	var rec: Dictionary = recup.get("recharges", {})
-	var parts: Array = []
-	parts.append("élec %d kg" % int(recup.get("comp_elec", 0)))
-	parts.append("indus %d kg" % int(recup.get("comp_indus", 0)))
-	parts.append("spatiaux %d kg" % int(recup.get("comp_spatial", 0)))
-	parts.append("minerai %d kg" % int(recup.get("minerai", 0)))
-	parts.append("épave vaisseau ×%d (%d syst. ok)" % [int(recup.get("epave_vaisseau", 0)), int(recup.get("epave_sys", 0))])
-	parts.append("épave véhicule ×%d" % int(recup.get("epave_vehicule", 0)))
-	var rparts: Array = []
-	for k in rec.keys():
-		rparts.append("%s ×%d" % [k, int(rec[k])])
-	if not rparts.is_empty():
-		parts.append("recharges : " + ", ".join(rparts))
-	return "Stock de récupération — composants : " + " · ".join(parts)
-
-func refresh_salvage(sites: Array, recup: Dictionary, has_scaphandre: bool) -> void:
-	site_opt.clear()
-	if sites.is_empty():
-		site_opt.add_item("Aucun site connu sur ce corps")
-	else:
-		for s in sites:
-			site_opt.add_item(s + (" (E)" if SalvageTables.est_site_espace(s) else ""))
-	btn_recup.disabled = sites.is_empty()
-	recup_label.text = _recup_txt(recup)
-
-func set_body(body: Variant, graine: int, recup := {}, has_scaphandre := false) -> void:
+func set_body(body: Variant, graine: int) -> void:
 	selected = -1
 	if body == null:
 		map = {}
@@ -163,7 +73,6 @@ func set_body(body: Variant, graine: int, recup := {}, has_scaphandre := false) 
 	msg_label.text = ""
 	_legend()
 	info_label.text = "Cliquez sur une case hexagonale pour afficher ses caractéristiques (coordonnées, environnement, construction)."
-	refresh_salvage(SalvageTables.sites_du_corps(b), recup, has_scaphandre)
 	canvas.queue_redraw()
 
 func _legend() -> void:
