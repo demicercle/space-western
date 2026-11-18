@@ -144,8 +144,12 @@ func set_ship(s: Ship) -> void:
 	for ch in hold_list.get_children():
 		hold_list.remove_child(ch)
 		ch.queue_free()
-	hold_list.add_child(_hold_header("Nom de l'article"))
-	hold_list.add_child(_hold_header("Quantité"))
+	var h_nom := _hold_header("Nom de l'article")
+	h_nom.size_flags_horizontal = SIZE_EXPAND_FILL
+	hold_list.add_child(h_nom)
+	var h_q := _hold_header("Quantité")
+	h_q.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hold_list.add_child(h_q)
 	var keys := s.cargaison.keys()
 	keys.sort()
 	for k in keys:
@@ -154,10 +158,12 @@ func set_ship(s: Ship) -> void:
 			continue
 		var nl := Label.new()
 		nl.text = ShopTables.nom_affiche(str(k))
+		nl.size_flags_horizontal = SIZE_EXPAND_FILL
 		nl.add_theme_font_size_override("font_size", 12)
 		hold_list.add_child(nl)
 		var ql := Label.new()
 		ql.text = "%s · %s" % [ShopTables.quantite_soute_txt(str(k), q), ShopTables.tonnage_txt(q, ShopTables.place_de(str(k)))]
+		ql.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		ql.add_theme_font_size_override("font_size", 12)
 		hold_list.add_child(ql)
 

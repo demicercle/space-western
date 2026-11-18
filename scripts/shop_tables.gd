@@ -21,8 +21,8 @@ const CATALOGUE := [
 	{"nom": "Matériel de plongée", "prix": 50, "dispo": "B", "cat": "Courant", "note": "Plongée jusqu'à 100 m pendant une heure.", "place": 0.5},
 	{"nom": "Module-mémoire", "prix": 1000, "dispo": "A", "cat": "Courant", "note": "5 coordonnées de saut ; stockage de données.", "place": 0.01},
 	{"nom": "Navordinateur de poche", "prix": 750, "dispo": "A", "cat": "Courant", "note": "(sc) en Navigation à la surface des planètes.", "place": 0.2},
-	{"nom": "Pièces détachées (1 kg)", "prix": 2, "dispo": "B", "cat": "Courant", "note": "Réparer un vaisseau, véhicule ou objet (1 kg consommé par réparation).", "place": 0.01},
-	{"nom": "Ration", "prix": 1, "dispo": "C", "cat": "Courant", "lot": 10, "note": "Lot de 10 rations (1 ration/personne/jour de voyage).", "place": 0.01},
+	{"nom": "Pièces détachées (1 kg)", "prix": 2, "dispo": "B", "cat": "Courant", "marchandise": true, "note": "Réparer un vaisseau, véhicule ou objet (1 kg consommé par réparation) — marchandise comptée au kg.", "place": 0.001},
+	{"nom": "Ration", "prix": 1, "dispo": "C", "cat": "Courant", "note": "1 ration = 0,5 kg (1 ration/personne/jour de voyage) — vendue à l'unité.", "place": 0.005},
 	{"nom": "Repas", "prix": 25, "dispo": "B", "cat": "Courant", "note": "Un bon repas.", "place": 0.01},
 	{"nom": "Respirateur", "prix": 10, "dispo": "B", "cat": "Courant", "note": "(SC) contre gaz et atmosphères nocives ; ~50 h.", "place": 0.1},
 	{"nom": "Sac à dos", "prix": 1, "dispo": "C", "cat": "Courant", "note": "Emporte 10 kg.", "place": 0.05},
@@ -103,8 +103,8 @@ const STATION_RELAIS := [
 	{"nom": "Combinaison de vol", "prix": 100, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.2},
 	{"nom": "Eau (1 L)", "prix": 2, "dispo": "C", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.001},
 	{"nom": "Instruments d'électronique", "prix": 500, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 1.0},
-	{"nom": "Pièces détachées (1 kg)", "prix": 5, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG, au kg.", "place": 0.01},
-	{"nom": "Ration", "prix": 2, "dispo": "C", "cat": "Station-relais", "lot": 10, "note": "Comptoir OCG — lot de 10 (0,5 kg).", "place": 0.01},
+	{"nom": "Pièces détachées (1 kg)", "prix": 5, "dispo": "B", "cat": "Station-relais", "marchandise": true, "note": "Comptoir OCG, au kg — marchandise comptée au kg.", "place": 0.001},
+	{"nom": "Ration", "prix": 2, "dispo": "C", "cat": "Station-relais", "note": "Comptoir OCG — à l'unité (1 ration = 0,5 kg).", "place": 0.005},
 	{"nom": "Repas", "prix": 2, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.01},
 	{"nom": "Scaphandre", "prix": 1000, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 1.0},
 ]
@@ -149,7 +149,10 @@ static func tonnage_txt(q: float, place: float) -> String:
 	return "%s UC" % MAUtils.fmt_num(t)
 
 static func est_marchandise(nom: String) -> bool:
-	return find_marchandise(nom) != null
+	if find_marchandise(nom) != null:
+		return true
+	var it: Variant = find_item(nom)
+	return it != null and bool(it.get("marchandise", false))
 
 static func quantite_soute_txt(nom: String, q: float) -> String:
 	if est_marchandise(nom):

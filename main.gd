@@ -326,7 +326,7 @@ func _build_context_menu() -> void:
 	sell_price_label.add_theme_font_size_override("font_size", 13)
 	sell_price_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.7))
 	sell_dialog.add_child(sell_price_label)
-	sell_edit.text_changed.connect(func(_t: String) -> void: _update_sell_price())
+	sell_edit.text_changed.connect(_on_sell_edit_changed)
 	sell_dialog.confirmed.connect(_on_sell_dialog_confirmed)
 	sell_dialog.canceled.connect(func() -> void: pending_sell = "")
 	buy_dialog = AcceptDialog.new()
@@ -344,7 +344,7 @@ func _build_context_menu() -> void:
 	buy_price_label.add_theme_font_size_override("font_size", 13)
 	buy_price_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	buy_dialog.add_child(buy_price_label)
-	buy_edit.text_changed.connect(func(_t: String) -> void: _update_buy_price())
+	buy_edit.text_changed.connect(_on_buy_edit_changed)
 	buy_dialog.confirmed.connect(_on_buy_dialog_confirmed)
 	buy_dialog.canceled.connect(func() -> void: pending_buy = null)
 
@@ -677,7 +677,11 @@ func _update_buy_price() -> void:
 	if v < 0.0:
 		v = 0.0
 	var cost := int(round(prix_u * _buy_q(it, v)))
-	buy_price_label.text = "Prix total : %s €" % MAUtils.fmt_int(cost)
+	var nom: String = str(it["nom"])
+	var prix_txt := "%s €/u" % MAUtils.fmt_num(prix_u)
+	if ShopTables.est_marchandise(nom):
+		prix_txt = "%s €/kg" % MAUtils.fmt_num(prix_u / (ShopTables.place_de(nom) * 1000.0))
+	buy_price_label.text = "prix d'achat: %s ; total : %s €" % [prix_txt, MAUtils.fmt_int(cost)]
 
 func _on_buy(it: Dictionary) -> void:
 	if not peut_commercer():
@@ -694,7 +698,7 @@ func _on_buy(it: Dictionary) -> void:
 	if ShopTables.est_marchandise(nom):
 		var kg_max := q_max * ShopTables.place_de(nom) * 1000.0
 		buy_dialog.dialog_text = "Indiquer la quantité à acheter : %s — en kg (1 UC = 1 000 kg). Prix : %s €/UC. Max achetable : %s kg." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(prix_u), MAUtils.fmt_int(kg_max)]
-		buy_edit.text = MAUtils.fmt_int(kg_max)
+		buy_edit.text = str(int(kg_max))
 	else:
 		var u_max := int(floor(q_max))
 		buy_dialog.dialog_text = "Indiquer la quantité à acheter : %s — en unités (1 unité pèse %s). Prix : %s €/u. Max achetable : %d unité(s)." % [ShopTables.nom_affiche(nom), ShopTables.tonnage_txt(1.0, ShopTables.place_de(nom)), MAUtils.fmt_int(prix_u), u_max]
@@ -756,10 +760,10 @@ func _on_sell(nom: String) -> void:
 	if ShopTables.est_marchandise(nom):
 		var kg_max := q * ShopTables.place_de(nom) * 1000.0
 		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en kg (1 UC = 1 000 kg). En soute : %s kg · prix de vente : %s €/UC." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(kg_max), MAUtils.fmt_int(prix)]
-		sell_edit.text = MAUtils.fmt_int(kg_max)
+		sell_edit.text = str(int(kg_max))
 	else:
 		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en unités. En soute : %s · prix de vente : %s €/u." % [ShopTables.nom_affiche(nom), MAUtils.fmt_num(q), MAUtils.fmt_int(prix)]
-		sell_edit.text = MAUtils.fmt_num(q)
+		sell_edit.text = str(int(q))
 	sell_dialog.popup_centered()
 	_update_sell_price()
 
@@ -772,6 +776,25 @@ func _sell_q_sold(nom: String, v: float) -> float:
 		return minf(v, kg_max) / (ShopTables.place_de(nom) * 1000.0)
 	return floor(minf(v, q))
 
+func _filtre_digits(edit: LineEdit, t: String) -> void:
+	var clean := ""
+	for ch in t:
+		if ch >= "0" and ch <= "9":
+			clean += ch
+	if clean.length() > 6:
+		clean = clean.substr(0, 6)
+	if clean != t:
+		edit.text = clean
+		edit.caret_column = clean.length()
+
+func _on_sell_edit_changed(t: String) -> void:
+	_filtre_digits(sell_edit, t)
+	_update_sell_price()
+
+func _on_buy_edit_changed(t: String) -> void:
+	_filtre_digits(buy_edit, t)
+	_update_buy_price()
+
 func _update_sell_price() -> void:
 	var nom := pending_sell
 	if nom == "" or not ship.cargaison.has(nom):
@@ -783,7 +806,10 @@ func _update_sell_price() -> void:
 	if v < 0.0:
 		v = 0.0
 	var gain := int(round(prix * _sell_q_sold(nom, v)))
-	sell_price_label.text = "Prix de vente : %s €" % MAUtils.fmt_int(gain)
+	var prix_txt := "%s €/u" % MAUtils.fmt_num(float(prix))
+	if ShopTables.est_marchandise(nom):
+		prix_txt = "%s €/kg" % MAUtils.fmt_num(float(prix) / (ShopTables.place_de(nom) * 1000.0))
+	sell_price_label.text = "prix de vente : %s ; total : %s €" % [prix_txt, MAUtils.fmt_int(gain)]
 
 func _on_sell_dialog_confirmed() -> void:
 	var nom := pending_sell

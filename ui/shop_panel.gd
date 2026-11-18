@@ -161,8 +161,21 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	title_label.text = titre
 	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible ici)"]
 	_clear_grid(soute_grid)
-	soute_grid.add_child(_header_cell("Soute"))
-	soute_grid.add_child(_header_cell("Prix de vente"))
+	var nb_m := 0
+	var nb_a := 0
+	for k in soute.keys():
+		if float(soute[k]) > 0.0001:
+			if ShopTables.est_marchandise(str(k)):
+				nb_m += 1
+			else:
+				nb_a += 1
+	var prix_header := "Prix (unité)"
+	if nb_m > 0 and nb_a == 0:
+		prix_header = "Prix (kg)"
+	elif nb_m > 0 and nb_a > 0:
+		prix_header = "Prix (unité/kg)"
+	soute_grid.add_child(_header_cell("Nom"))
+	soute_grid.add_child(_header_cell(prix_header))
 	soute_grid.add_child(_header_cell(""))
 	var sk: Array = soute.keys()
 	sk.sort()
@@ -180,7 +193,11 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var it0: Variant = ShopTables.find_item(str(k))
 		var c0: float = float(cours.get(str(it0.get("dispo", "C")) if it0 != null else "C", 1.0))
 		var pl := Label.new()
-		pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv))
+		if ShopTables.est_marchandise(str(k)):
+			var p_kg := float(pv) / (ShopTables.place_de(str(k)) * 1000.0)
+			pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/kg" % MAUtils.fmt_num(p_kg))
+		else:
+			pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv))
 		pl.add_theme_font_size_override("font_size", 12)
 		pl.add_theme_color_override("font_color", _couleur_prix(c0))
 		soute_grid.add_child(pl)
@@ -219,7 +236,12 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		var prix := ShopTables.prix_achat(it, cours)
 		var c: float = float(cours.get(str(it.get("dispo", "C")), 1.0))
 		var prix_l := Label.new()
-		var unit_lbl := "€/UC" if ShopTables.est_marchandise(nom) else "€/u"
+		var unit_lbl := "€/u"
+		if ShopTables.est_marchandise(nom):
+			if ShopTables.place_de(nom) >= 0.999:
+				unit_lbl = "€/UC"
+			else:
+				unit_lbl = "€/kg"
 		prix_l.text = ("—" if prix < 0 else "%s %s" % [MAUtils.fmt_int(prix), unit_lbl])
 		prix_l.size_flags_horizontal = SIZE_EXPAND_FILL
 		prix_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
