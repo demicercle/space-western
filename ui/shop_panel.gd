@@ -98,7 +98,7 @@ func _ready() -> void:
 	left.add_theme_constant_override("separation", 4)
 	split.add_child(left)
 	var sl := Label.new()
-	sl.text = "Soute — vendre (vente = achat ÷ 1,5) :"
+	sl.text = "Soute"
 	sl.add_theme_font_size_override("font_size", 13)
 	sl.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 	left.add_child(sl)
@@ -161,19 +161,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	title_label.text = titre
 	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible ici)"]
 	_clear_grid(soute_grid)
-	var nb_m := 0
-	var nb_a := 0
-	for k in soute.keys():
-		if float(soute[k]) > 0.0001:
-			if ShopTables.est_marchandise(str(k)):
-				nb_m += 1
-			else:
-				nb_a += 1
-	var prix_header := "Prix (unité)"
-	if nb_m > 0 and nb_a == 0:
-		prix_header = "Prix (kg)"
-	elif nb_m > 0 and nb_a > 0:
-		prix_header = "Prix (unité/kg)"
+	var prix_header := "Prix"
 	soute_grid.add_child(_header_cell("Nom"))
 	soute_grid.add_child(_header_cell(prix_header))
 	soute_grid.add_child(_header_cell(""))

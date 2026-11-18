@@ -759,7 +759,7 @@ func _on_sell(nom: String) -> void:
 	var q: float = float(ship.cargaison[nom])
 	if ShopTables.est_marchandise(nom):
 		var kg_max := q * ShopTables.place_de(nom) * 1000.0
-		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en kg (1 UC = 1 000 kg). En soute : %s kg · prix de vente : %s €/UC." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(kg_max), MAUtils.fmt_int(prix)]
+		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en kg. En soute : %s kg · prix de vente : %s €/UC." % [ShopTables.nom_affiche(nom), MAUtils.fmt_int(kg_max), MAUtils.fmt_int(prix)]
 		sell_edit.text = str(int(kg_max))
 	else:
 		sell_dialog.dialog_text = "Indiquer la quantité à vendre : %s — en unités. En soute : %s · prix de vente : %s €/u." % [ShopTables.nom_affiche(nom), MAUtils.fmt_num(q), MAUtils.fmt_int(prix)]
