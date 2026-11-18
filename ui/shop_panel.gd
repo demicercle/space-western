@@ -162,9 +162,15 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	info_label.text = "Crédits : %s € · Soute : %s / %s UC · Cours : %s%s" % [MAUtils.fmt_int(credits), MAUtils.fmt_num(soute_used), MAUtils.fmt_num(soute_max), cours_txt, "" if docked else " · (commerce indisponible ici)"]
 	_clear_grid(soute_grid)
 	var prix_header := "Prix"
-	soute_grid.add_child(_header_cell("Nom"))
-	soute_grid.add_child(_header_cell(prix_header))
-	soute_grid.add_child(_header_cell(""))
+	var h_nom := _header_cell("Nom")
+	h_nom.size_flags_horizontal = SIZE_EXPAND_FILL
+	soute_grid.add_child(h_nom)
+	var h_prix := _header_cell(prix_header)
+	h_prix.custom_minimum_size = Vector2(128, 0)
+	soute_grid.add_child(h_prix)
+	var h_btn := _header_cell("")
+	h_btn.custom_minimum_size = Vector2(64, 0)
+	soute_grid.add_child(h_btn)
 	var sk: Array = soute.keys()
 	sk.sort()
 	for k in sk:
@@ -175,6 +181,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		nl.text = "%s %s — %s" % [ShopTables.nom_affiche(str(k)), ShopTables.quantite_soute_txt(str(k), q), ShopTables.tonnage_txt(q, ShopTables.place_de(str(k)))]
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size = Vector2(120, 0)
+		nl.size_flags_horizontal = SIZE_EXPAND_FILL
 		nl.add_theme_font_size_override("font_size", 12)
 		soute_grid.add_child(nl)
 		var pv := ShopTables.prix_vente(str(k), cours)
@@ -186,12 +193,14 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 			pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/kg" % MAUtils.fmt_num(p_kg))
 		else:
 			pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv))
+		pl.custom_minimum_size = Vector2(128, 0)
 		pl.add_theme_font_size_override("font_size", 12)
 		pl.add_theme_color_override("font_color", _couleur_prix(c0))
 		soute_grid.add_child(pl)
 		var btn := Button.new()
 		btn.text = "Vendre"
 		btn.disabled = not docked or pv <= 0
+		btn.custom_minimum_size = Vector2(64, 0)
 		btn.tooltip_text = "Vendre : popup « indiquer la quantité à vendre » (kg pour les marchandises, unités sinon)"
 		btn.pressed.connect(_on_sell.bind(str(k)))
 		soute_grid.add_child(btn)
