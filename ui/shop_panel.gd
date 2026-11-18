@@ -106,7 +106,7 @@ func _ready() -> void:
 	ssc.size_flags_vertical = SIZE_EXPAND_FILL
 	left.add_child(ssc)
 	soute_grid = GridContainer.new()
-	soute_grid.columns = 3
+	soute_grid.columns = 4
 	soute_grid.add_theme_constant_override("h_separation", 10)
 	soute_grid.add_theme_constant_override("v_separation", 4)
 	soute_grid.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -137,6 +137,9 @@ func _header_cell(txt: String) -> Label:
 	l.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	return l
 
+func _larg_car(n: int, taille: int) -> float:
+	return ThemeDB.fallback_font.get_string_size("0".repeat(n), HORIZONTAL_ALIGNMENT_LEFT, -1, taille).x + 8.0
+
 func _clear_grid(grid: GridContainer) -> void:
 	for ch in grid.get_children():
 		grid.remove_child(ch)
@@ -165,11 +168,14 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 	var h_nom := _header_cell("Nom")
 	h_nom.size_flags_horizontal = SIZE_EXPAND_FILL
 	soute_grid.add_child(h_nom)
+	var h_qte := _header_cell("Quantité")
+	h_qte.custom_minimum_size = Vector2(_larg_car(10, 13), 0)
+	soute_grid.add_child(h_qte)
 	var h_prix := _header_cell(prix_header)
-	h_prix.custom_minimum_size = Vector2(128, 0)
+	h_prix.custom_minimum_size = Vector2(_larg_car(10, 13), 0)
 	soute_grid.add_child(h_prix)
 	var h_btn := _header_cell("")
-	h_btn.custom_minimum_size = Vector2(64, 0)
+	h_btn.custom_minimum_size = Vector2(_larg_car(6, 13), 0)
 	soute_grid.add_child(h_btn)
 	var sk: Array = soute.keys()
 	sk.sort()
@@ -178,12 +184,17 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		if q <= 0.0001:
 			continue
 		var nl := Label.new()
-		nl.text = "%s %s — %s" % [ShopTables.nom_affiche(str(k)), ShopTables.quantite_soute_txt(str(k), q), ShopTables.tonnage_txt(q, ShopTables.place_de(str(k)))]
+		nl.text = ShopTables.nom_affiche(str(k))
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size = Vector2(120, 0)
 		nl.size_flags_horizontal = SIZE_EXPAND_FILL
 		nl.add_theme_font_size_override("font_size", 12)
 		soute_grid.add_child(nl)
+		var ql := Label.new()
+		ql.text = ShopTables.quantite_soute_txt(str(k), q)
+		ql.custom_minimum_size = Vector2(_larg_car(10, 12), 0)
+		ql.add_theme_font_size_override("font_size", 12)
+		soute_grid.add_child(ql)
 		var pv := ShopTables.prix_vente(str(k), cours)
 		var it0: Variant = ShopTables.find_item(str(k))
 		var c0: float = float(cours.get(str(it0.get("dispo", "C")) if it0 != null else "C", 1.0))
@@ -193,14 +204,14 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 			pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/kg" % MAUtils.fmt_num(p_kg))
 		else:
 			pl.text = ("— invendable (cours ×0)" if pv <= 0 else "%s €/u" % MAUtils.fmt_int(pv))
-		pl.custom_minimum_size = Vector2(128, 0)
+		pl.custom_minimum_size = Vector2(_larg_car(10, 12), 0)
 		pl.add_theme_font_size_override("font_size", 12)
 		pl.add_theme_color_override("font_color", _couleur_prix(c0))
 		soute_grid.add_child(pl)
 		var btn := Button.new()
 		btn.text = "Vendre"
 		btn.disabled = not docked or pv <= 0
-		btn.custom_minimum_size = Vector2(64, 0)
+		btn.custom_minimum_size = Vector2(_larg_car(6, 12), 0)
 		btn.tooltip_text = "Vendre : popup « indiquer la quantité à vendre » (kg pour les marchandises, unités sinon)"
 		btn.pressed.connect(_on_sell.bind(str(k)))
 		soute_grid.add_child(btn)
