@@ -53,14 +53,14 @@ static func _couleur_prix(c: float) -> Color:
 
 static func _tab_of(cat: String) -> int:
 	if cat == "Militaire":
-		return 2
-	if cat == "Médical":
 		return 3
-	if cat == "Courant" or cat == "Station-relais":
-		return 1
-	if cat == "Luxe":
+	if cat == "Médical":
 		return 4
-	return 0
+	if cat == "Courant" or cat == "Station-relais":
+		return 2
+	if cat == "Luxe":
+		return 5
+	return 1
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 8)
@@ -88,33 +88,31 @@ func _ready() -> void:
 	msg_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	msg_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	hb.add_child(msg_label)
-	var split := HBoxContainer.new()
-	split.add_theme_constant_override("separation", 10)
-	split.size_flags_horizontal = SIZE_EXPAND_FILL
-	split.size_flags_vertical = SIZE_EXPAND_FILL
-	add_child(split)
-	var left := VBoxContainer.new()
-	left.custom_minimum_size = Vector2(330, 0)
-	left.add_theme_constant_override("separation", 4)
-	split.add_child(left)
+	tabs = TabContainer.new()
+	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
+	tabs.size_flags_vertical = SIZE_EXPAND_FILL
+	add_child(tabs)
+	var tab_s := Control.new()
+	tab_s.name = "Soute"
+	tabs.add_child(tab_s)
+	var svb := VBoxContainer.new()
+	svb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tab_s.add_child(svb)
 	var sl := Label.new()
 	sl.text = "Soute"
 	sl.add_theme_font_size_override("font_size", 13)
 	sl.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
-	left.add_child(sl)
+	svb.add_child(sl)
 	var ssc := ScrollContainer.new()
 	ssc.size_flags_vertical = SIZE_EXPAND_FILL
-	left.add_child(ssc)
+	svb.add_child(ssc)
 	soute_grid = GridContainer.new()
 	soute_grid.columns = 4
 	soute_grid.add_theme_constant_override("h_separation", 10)
 	soute_grid.add_theme_constant_override("v_separation", 4)
 	soute_grid.size_flags_horizontal = SIZE_EXPAND_FILL
 	ssc.add_child(soute_grid)
-	tabs = TabContainer.new()
-	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
-	tabs.size_flags_vertical = SIZE_EXPAND_FILL
-	split.add_child(tabs)
+	grids.append(soute_grid)
 	for t in TAB_TITLES:
 		var tab := Control.new()
 		tab.name = t
@@ -215,7 +213,8 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		btn.tooltip_text = "Vendre : popup « indiquer la quantité à vendre » (kg pour les marchandises, unités sinon)"
 		btn.pressed.connect(_on_sell.bind(str(k)))
 		soute_grid.add_child(btn)
-	for grid in grids:
+	for gi in range(1, grids.size()):
+		var grid: GridContainer = grids[gi]
 		_clear_grid(grid)
 		grid.add_child(_header_cell("Objet"))
 		grid.add_child(_header_cell("Description"))
@@ -279,11 +278,16 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		own.add_theme_font_size_override("font_size", 12)
 		own.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 		grid.add_child(own)
-	var counts := [0, 0, 0, 0, 0]
+	var counts := [0, 0, 0, 0, 0, 0]
 	for it in items:
 		counts[_tab_of(str(it.get("cat", "")))] += 1
+	var n_soute := 0
+	for k in soute.keys():
+		if float(soute[k]) > 0.0001:
+			n_soute += 1
+	tabs.set_tab_title(0, "Soute (%d)" % n_soute)
 	for i in range(TAB_TITLES.size()):
-		tabs.set_tab_title(i, "%s (%d)" % [TAB_TITLES[i], counts[i]])
+		tabs.set_tab_title(i + 1, "%s (%d)" % [TAB_TITLES[i], counts[i + 1]])
 	if p_docked and not est_relais and items.size() == 0:
 		set_message("Aucun article trouvé pour l'instant — cliquez sur « Rechercher des articles ».")
 
