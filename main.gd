@@ -73,10 +73,12 @@ var voyage_dialog: AcceptDialog
 var pending_voyage: Callable
 var sell_dialog: AcceptDialog
 var sell_slider: HSlider
+var sell_edit: LineEdit
 var sell_price_label: Label
 var pending_sell := ""
 var buy_dialog: AcceptDialog
 var buy_slider: HSlider
+var buy_edit: LineEdit
 var buy_price_label: Label
 var pending_buy: Variant = null
 var pending_virer: Character = null
@@ -319,18 +321,26 @@ func _build_context_menu() -> void:
 	sell_dialog.unresizable = true
 	sell_dialog.min_size = Vector2i(256, 256)
 	sell_dialog.size = Vector2i(256, 256)
+	var sell_hb := HBoxContainer.new()
+	sell_hb.add_theme_constant_override("separation", 8)
+	sell_dialog.add_child(sell_hb)
 	sell_slider = HSlider.new()
 	sell_slider.min_value = 1.0
 	sell_slider.max_value = 999999.0
 	sell_slider.step = 1.0
-	sell_slider.custom_minimum_size = Vector2(200, 0)
+	sell_slider.custom_minimum_size = Vector2(160, 0)
 	sell_slider.size_flags_horizontal = SIZE_EXPAND_FILL
-	sell_dialog.add_child(sell_slider)
+	sell_hb.add_child(sell_slider)
+	sell_edit = LineEdit.new()
+	sell_edit.custom_minimum_size = Vector2(80, 0)
+	sell_edit.placeholder_text = "quantité"
+	sell_hb.add_child(sell_edit)
 	sell_price_label = Label.new()
 	sell_price_label.add_theme_font_size_override("font_size", 13)
 	sell_price_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.7))
 	sell_dialog.add_child(sell_price_label)
-	sell_slider.value_changed.connect(func(_v: float) -> void: _update_sell_price())
+	sell_slider.value_changed.connect(_on_sell_slider_changed)
+	sell_edit.text_changed.connect(_on_sell_edit_changed)
 	sell_dialog.confirmed.connect(_on_sell_dialog_confirmed)
 	sell_dialog.canceled.connect(func() -> void: pending_sell = "")
 	buy_dialog = AcceptDialog.new()
@@ -341,18 +351,26 @@ func _build_context_menu() -> void:
 	buy_dialog.unresizable = true
 	buy_dialog.min_size = Vector2i(256, 256)
 	buy_dialog.size = Vector2i(256, 256)
+	var buy_hb := HBoxContainer.new()
+	buy_hb.add_theme_constant_override("separation", 8)
+	buy_dialog.add_child(buy_hb)
 	buy_slider = HSlider.new()
 	buy_slider.min_value = 1.0
 	buy_slider.max_value = 999999.0
 	buy_slider.step = 1.0
-	buy_slider.custom_minimum_size = Vector2(200, 0)
+	buy_slider.custom_minimum_size = Vector2(160, 0)
 	buy_slider.size_flags_horizontal = SIZE_EXPAND_FILL
-	buy_dialog.add_child(buy_slider)
+	buy_hb.add_child(buy_slider)
+	buy_edit = LineEdit.new()
+	buy_edit.custom_minimum_size = Vector2(80, 0)
+	buy_edit.placeholder_text = "quantité"
+	buy_hb.add_child(buy_edit)
 	buy_price_label = Label.new()
 	buy_price_label.add_theme_font_size_override("font_size", 13)
 	buy_price_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.45))
 	buy_dialog.add_child(buy_price_label)
-	buy_slider.value_changed.connect(func(_v: float) -> void: _update_buy_price())
+	buy_slider.value_changed.connect(_on_buy_slider_changed)
+	buy_edit.text_changed.connect(_on_buy_edit_changed)
 	buy_dialog.confirmed.connect(_on_buy_dialog_confirmed)
 	buy_dialog.canceled.connect(func() -> void: pending_buy = null)
 
@@ -711,7 +729,8 @@ func _on_buy(it: Dictionary) -> void:
 	buy_slider.min_value = 1.0
 	buy_slider.max_value = maxf(1.0, v_max)
 	buy_slider.step = 1.0
-	buy_slider.value = buy_slider.max_value
+	buy_slider.value = 1.0
+	buy_edit.text = "1"
 	buy_dialog.popup_centered()
 	_update_buy_price()
 
@@ -776,7 +795,8 @@ func _on_sell(nom: String) -> void:
 	sell_slider.min_value = 1.0
 	sell_slider.max_value = maxf(1.0, v_max)
 	sell_slider.step = 1.0
-	sell_slider.value = sell_slider.max_value
+	sell_slider.value = 1.0
+	sell_edit.text = "1"
 	sell_dialog.popup_centered()
 	_update_sell_price()
 
@@ -788,6 +808,51 @@ func _sell_q_sold(nom: String, v: float) -> float:
 		var kg_max := q * ShopTables.place_de(nom) * 1000.0
 		return minf(v, kg_max) / (ShopTables.place_de(nom) * 1000.0)
 	return floor(minf(v, q))
+
+func _filtre_digits(edit: LineEdit, t: String) -> void:
+	var clean := ""
+	for ch in t:
+		if ch >= "0" and ch <= "9":
+			clean += ch
+	if clean.length() > 6:
+		clean = clean.substr(0, 6)
+	if clean != t:
+		edit.text = clean
+		edit.caret_column = clean.length()
+
+func _on_sell_slider_changed(v: float) -> void:
+	var t := str(int(v))
+	if sell_edit.text != t:
+		sell_edit.text = t
+	_update_sell_price()
+
+func _on_sell_edit_changed(t: String) -> void:
+	_filtre_digits(sell_edit, t)
+	var v := sell_edit.text.to_float()
+	if v < sell_slider.min_value:
+		v = sell_slider.min_value
+	if v > sell_slider.max_value:
+		v = sell_slider.max_value
+	if sell_slider.value != v:
+		sell_slider.value = v
+	_update_sell_price()
+
+func _on_buy_slider_changed(v: float) -> void:
+	var t := str(int(v))
+	if buy_edit.text != t:
+		buy_edit.text = t
+	_update_buy_price()
+
+func _on_buy_edit_changed(t: String) -> void:
+	_filtre_digits(buy_edit, t)
+	var v := buy_edit.text.to_float()
+	if v < buy_slider.min_value:
+		v = buy_slider.min_value
+	if v > buy_slider.max_value:
+		v = buy_slider.max_value
+	if buy_slider.value != v:
+		buy_slider.value = v
+	_update_buy_price()
 
 func _update_sell_price() -> void:
 	var nom := pending_sell
