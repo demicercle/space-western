@@ -136,7 +136,7 @@ func set_ship(s: Ship) -> void:
 	bb += "\n[b]Systèmes secondaires[/b] : " + (", ".join(s.systemes_secondaires) if s.systemes_secondaires.size() > 0 else "aucun") + "\n"
 	sheet_label.text = bb
 	var hb := "[b]Réserve de Radix[/b] : %s / %s PC — plein : %s €/1 000 PC (planète ×0,75, station-relais ×1,5 le tonnage ; ici %s €/1 000 PC)\n" % [MAUtils.fmt_int(s.radix_pc), MAUtils.fmt_int(s.autonomie_pc), MAUtils.fmt_num(s.tonnage * 0.75), MAUtils.fmt_num(radix_unit_price)]
-	hb += "[b]Rations[/b] : %d (+%d repas, consommés en priorité) — 1 par personne et par jour de voyage\n" % [s.rations, int(s.cargaison.get("Repas", 0))]
+	hb += "[b]Nourriture[/b] : %s kg (+%d repas, consommés en priorité) — 300 g par personne et par jour de voyage\n" % [MAUtils.fmt_num(float(s.cargaison.get("Nourriture (1 UC)", 0)) * 1000.0 + int(s.cargaison.get("Repas", 0)) * 0.3), int(s.cargaison.get("Repas", 0))]
 	hb += "[b]Poids en soute[/b] : %s t / %s t · cours de vente : A ×%s · B ×%s · C ×%s · prix de vente = prix d'achat ÷ 1,5 (occasion)%s\n" % [MAUtils.fmt_num(soute_used()), MAUtils.fmt_num(s.soute), MAUtils.fmt_num(cours.get("A", 1.0)), MAUtils.fmt_num(cours.get("B", 1.0)), MAUtils.fmt_num(cours.get("C", 1.0)), "" if docked else " (vente indisponible ici)"]
 	hold_label.text = hb
 	if soute_bar != null:

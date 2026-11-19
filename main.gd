@@ -81,6 +81,8 @@ var buy_slider: HSlider
 var buy_edit: LineEdit
 var buy_price_label: Label
 var pending_buy: Variant = null
+var sell_buy_popup: SellBuyPopup
+var sellbuy_mode := ""
 var pending_virer: Character = null
 var panel_style: StyleBoxFlat
 var ship_health_label: Label
@@ -373,6 +375,9 @@ func _build_context_menu() -> void:
 	buy_edit.text_changed.connect(_on_buy_edit_changed)
 	buy_dialog.confirmed.connect(_on_buy_dialog_confirmed)
 	buy_dialog.canceled.connect(func() -> void: pending_buy = null)
+	sell_buy_popup = SellBuyPopup.new()
+	add_child(sell_buy_popup)
+	sell_buy_popup.confirmed_quantity.connect(_on_sellbuy_confirmed)
 
 func _ask_voyage_confirm(text: String, action: Callable) -> void:
 	pending_voyage = action
@@ -400,7 +405,7 @@ func _build_pause_menu() -> void:
 	pause_menu.add_item("Cheat : +1 000 €", 3)
 	pause_menu.add_item("Cheat : +1 000 Radix", 4)
 	pause_menu.add_item("Cheat : quick recruit (Pilote+Vigie+Ingénieur+Canonnier)", 5)
-	pause_menu.add_item("Cheat : +100 rations", 6)
+	pause_menu.add_item("Cheat : +100 kg de nourriture", 6)
 	pause_menu.add_item("Cheat : soin de groupe (tout l'équipage indemne)", 7)
 	pause_menu.id_pressed.connect(_on_pause_id)
 
@@ -457,9 +462,8 @@ func _on_pause_id(id: int) -> void:
 		5:
 			_cheat_quick_recruit()
 		6:
-			ship.rations += 100
-			ship.cargaison["Ration"] = ship.rations
-			msg_label.text = "Cheat : +100 rations (total : %d)." % ship.rations
+			ship.cargaison["Nourriture (1 UC)"] = float(ship.cargaison.get("Nourriture (1 UC)", 0)) + 0.1
+			msg_label.text = "Cheat : +100 kg de nourriture (total : %s kg)." % MAUtils.fmt_num(float(ship.cargaison["Nourriture (1 UC)"]) * 1000.0)
 			refresh_all()
 		7:
 			for c in characters:
@@ -500,12 +504,13 @@ func _cheat_quick_recruit() -> void:
 
 func _appliquer_sante_voyage(res: Dictionary) -> void:
 	var T: Dictionary = res["resume"]
-	var cons_r: int = int(T["rations"])
+	var cons_pj: int = int(T["rations"])
+	var dispo_kg := nourriture_kg()
+	var dispo_pj := int(round(dispo_kg / 0.3))
+	var famine_j := maxi(0, cons_pj - dispo_pj)
+	var use_pj := mini(dispo_pj, cons_pj)
 	var repas: int = int(ship.cargaison.get("Repas", 0))
-	var total := ship.rations + repas
-	var famine_j := maxi(0, cons_r - total)
-	var use_repas := mini(repas, cons_r)
-	var use_ration := mini(ship.rations, maxi(0, cons_r - repas))
+	var use_repas := mini(repas, use_pj)
 	if use_repas > 0:
 		T["repas_utilises"] = use_repas
 		var reste_repas := repas - use_repas
@@ -513,8 +518,14 @@ func _appliquer_sante_voyage(res: Dictionary) -> void:
 			ship.cargaison.erase("Repas")
 		else:
 			ship.cargaison["Repas"] = reste_repas
-	ship.rations = maxi(0, ship.rations - use_ration)
-	ship.cargaison["Ration"] = ship.rations
+	var reste_pj := use_pj - use_repas
+	var nour_kg := float(ship.cargaison.get("Nourriture (1 UC)", 0)) * 1000.0
+	var kg_used := minf(nour_kg, reste_pj * 0.3)
+	var reste_kg := nour_kg - kg_used
+	if reste_kg <= 0.0001:
+		ship.cargaison.erase("Nourriture (1 UC)")
+	else:
+		ship.cargaison["Nourriture (1 UC)"] = reste_kg / 1000.0
 	T["famine_jours"] = famine_j
 	var sante: Array = []
 	if famine_j > 0:
@@ -557,17 +568,20 @@ func refresh_ship_health() -> void:
 	ship_health_bar.max_value = maxf(1.0, float(ship.coque_pv))
 	ship_health_bar.value = clampf(float(ship.structure_pv), 0.0, ship_health_bar.max_value)
 
-func rations_necessaires() -> int:
+func nourriture_kg() -> float:
+	return float(ship.cargaison.get("Nourriture (1 UC)", 0)) * 1000.0 + int(ship.cargaison.get("Repas", 0)) * 0.3
+
+func rations_necessaires() -> float:
 	if destination.x < 0 or ship == null:
-		return characters.size()
+		return float(characters.size()) * 0.3
 	var jours := float(distance) / float(maxi(1, ship.vitesse_hyper_pc_j))
 	var j_r := int(ceil(jours))
 	if absf(jours - roundf(jours)) < 0.001:
 		j_r = int(round(jours))
-	return j_r * characters.size()
+	return float(j_r * characters.size()) * 0.3
 
-func rations_dispo() -> int:
-	return ship.rations + int(ship.cargaison.get("Repas", 0))
+func rations_dispo() -> float:
+	return nourriture_kg()
 
 func _itineraire_txt() -> String:
 	if destination.x < 0 or ship == null:
@@ -585,7 +599,7 @@ func _itineraire_txt() -> String:
 		duree = "moins d'une heure"
 	var rations := rations_necessaires()
 	var en_soute := rations_dispo()
-	return "Itinéraire : %s PC · durée estimée : %s · rations nécessaires : %d (en soute : %d)" % [MAUtils.fmt_int(distance), duree, rations, en_soute]
+	return "Itinéraire : %s PC · durée estimée : %s · nourriture nécessaire : %s kg (en soute : %s kg)" % [MAUtils.fmt_int(distance), duree, MAUtils.fmt_num(rations), MAUtils.fmt_num(en_soute)]
 
 func avancer_jours(n: int) -> void:
 	jours_ecoules += maxi(0, n)
@@ -714,6 +728,15 @@ func _on_buy(it: Dictionary) -> void:
 	if prix_u < 0:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), str(it["nom"])])
 		return
+	if ShopTables.est_marchandise(str(it["nom"])):
+		var nom0: String = str(it["nom"])
+		var q_max0 := _buy_q_max(it)
+		var kg_max0 := q_max0 * ShopTables.place_de(nom0) * 1000.0
+		var prix_kg0 := float(prix_u) / (ShopTables.place_de(nom0) * 1000.0)
+		pending_buy = it
+		sellbuy_mode = "achat"
+		sell_buy_popup.open_popup("achat", nom0, "kg", prix_kg0, kg_max0, "Prix : %s €/UC (1 UC = 1 000 kg). Max abordable : %s kg." % [MAUtils.fmt_int(prix_u), MAUtils.fmt_int(kg_max0)])
+		return
 	pending_buy = it
 	var nom: String = str(it["nom"])
 	var q_max := _buy_q_max(it)
@@ -739,6 +762,9 @@ func _on_buy_dialog_confirmed() -> void:
 	pending_buy = null
 	if it == null:
 		return
+	_do_buy(it, buy_slider.value)
+
+func _do_buy(it: Variant, v: float) -> void:
 	var nom: String = str(it["nom"])
 	if not peut_commercer():
 		shop_panel.set_message("Commerce indisponible ici : %s." % raison_commerce())
@@ -747,7 +773,6 @@ func _on_buy_dialog_confirmed() -> void:
 	if prix_u < 0:
 		shop_panel.set_message("Achat impossible ici : cours ×0 pour la catégorie %s (%s)." % [str(it.get("dispo", "?")), nom])
 		return
-	var v := buy_slider.value
 	if v <= 0.0:
 		shop_panel.set_message("Rien acheté (quantité nulle).")
 		return
@@ -764,8 +789,6 @@ func _on_buy_dialog_confirmed() -> void:
 		return
 	credits -= cost
 	ship.cargaison[nom] = float(ship.cargaison.get(nom, 0)) + q
-	if nom == "Ration":
-		ship.rations = int(ship.cargaison["Ration"])
 	var qtxt := "×%s" % MAUtils.fmt_num(q)
 	if ShopTables.est_marchandise(nom):
 		qtxt = "%s kg" % MAUtils.fmt_int(q * ShopTables.place_de(nom) * 1000.0)
@@ -781,6 +804,14 @@ func _on_sell(nom: String) -> void:
 	var prix := ship_panel.prix_vente_unit(nom)
 	if prix <= 0:
 		ship_panel.set_message("%s est invendable ici (cours ×0 pour sa catégorie)." % nom)
+		return
+	if ShopTables.est_marchandise(nom):
+		var q0: float = float(ship.cargaison[nom])
+		var kg_max := q0 * ShopTables.place_de(nom) * 1000.0
+		var prix_kg := float(prix) / (ShopTables.place_de(nom) * 1000.0)
+		pending_sell = nom
+		sellbuy_mode = "vente"
+		sell_buy_popup.open_popup("vente", nom, "kg", prix_kg, kg_max, "En soute : %s kg · prix de vente : %s €/UC." % [MAUtils.fmt_int(kg_max), MAUtils.fmt_int(prix)])
 		return
 	pending_sell = nom
 	var q: float = float(ship.cargaison[nom])
@@ -870,14 +901,18 @@ func _update_sell_price() -> void:
 func _on_sell_dialog_confirmed() -> void:
 	var nom := pending_sell
 	pending_sell = ""
-	if nom == "" or not ship.cargaison.has(nom):
+	if nom == "":
+		return
+	_do_sell(nom, sell_slider.value)
+
+func _do_sell(nom: String, v: float) -> void:
+	if not ship.cargaison.has(nom):
 		return
 	var q: float = float(ship.cargaison[nom])
 	var prix := ship_panel.prix_vente_unit(nom)
 	if prix <= 0:
 		ship_panel.set_message("%s est invendable ici (cours ×0 pour sa catégorie)." % nom)
 		return
-	var v := sell_slider.value
 	if v <= 0.0:
 		ship_panel.set_message("Rien vendu (quantité nulle).")
 		return
@@ -895,10 +930,20 @@ func _on_sell_dialog_confirmed() -> void:
 	ship.cargaison[nom] = q - q_sold
 	if float(ship.cargaison[nom]) <= 0.0001:
 		ship.cargaison.erase(nom)
-	if nom == "Ration":
-		ship.rations = int(ship.cargaison.get("Ration", 0))
 	ship_panel.set_message("Vendu : %s %s pour %s €." % [ShopTables.nom_affiche(nom), qtxt, MAUtils.fmt_int(gain)])
 	refresh_all()
+
+func _on_sellbuy_confirmed(q: float) -> void:
+	var m := sellbuy_mode
+	sellbuy_mode = ""
+	if m == "vente" and pending_sell != "":
+		var nom := pending_sell
+		pending_sell = ""
+		_do_sell(nom, q)
+	elif m == "achat" and pending_buy != null:
+		var it: Variant = pending_buy
+		pending_buy = null
+		_do_buy(it, q)
 
 func a_astroport() -> bool:
 	if ship_body == null:
@@ -1031,7 +1076,7 @@ func _on_rechercher() -> void:
 	var est_carrefour := com.contains("carrefour")
 	var est_pauvre := com.contains("pauvre")
 	var est_primitive := com.contains("primitive")
-	var liste: Array = ShopTables.CATALOGUE + ShopTables.MARCHANDISES
+	var liste: Array = ShopTables.MARCHANDISES
 	var tests := 0
 	var nouveaux := 0
 	var log := ""
@@ -1474,7 +1519,7 @@ func _resume_inter(res: Dictionary, nom_dep: String, di: Dictionary) -> String:
 	bb += "Périls interplanétaires : %d (%d évités, %d subis) · Pannes : %d (%d réparées) · Relevés : %d\n" % [T["perils"].size(), T["evites"], T["subis"], T["pannes"], T["reparees"], T["releves"]]
 	if T["degats"].size() > 0:
 		bb += "Dégâts subis : " + " ; ".join(T["degats"]) + "\n"
-	bb += "Radix consommé : %s PC · Rations consommées : %d\n" % [MAUtils.fmt_num(T["radix_pc"]), int(T["rations"])]
+	bb += "Radix consommé : %s PC · Nourriture consommée : %s kg\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_num(int(T["rations"]) * 0.3)]
 	if res["a_sec"]:
 		bb += "[color=ff5544]Panne sèche pendant le trajet vers la limite de saut.[/color]\n"
 	return bb
@@ -1488,9 +1533,9 @@ func _check_voyage_gal() -> void:
 	if ship.radix_pc <= 0:
 		_info_popup("Voyage impossible : pas de Radix en réserve (0 / %s PC)." % MAUtils.fmt_int(ship.autonomie_pc))
 		return
-	var besoin_r: int = rations_necessaires()
+	var besoin_r: float = rations_necessaires()
 	if rations_dispo() < besoin_r:
-		_ask_voyage_confirm("Rations insuffisantes (%d en soute pour %d nécessaires) — êtes-vous sûr de vouloir faire cela ?" % [rations_dispo(), besoin_r], _check_radix_gal)
+		_ask_voyage_confirm("Nourriture insuffisante (%s kg en soute pour %s kg nécessaires) — êtes-vous sûr de vouloir faire cela ?" % [MAUtils.fmt_num(rations_dispo()), MAUtils.fmt_num(besoin_r)], _check_radix_gal)
 		return
 	_check_radix_gal()
 
@@ -1638,9 +1683,9 @@ func _check_voyage_inter(body: Dictionary, dist: float) -> void:
 		_info_popup("Voyage impossible : pas de Radix en réserve (0 PC).")
 		return
 	var jours_est := dist / float(maxi(1, ship.vitesse_croisiere_us_j))
-	var besoin_r := int(ceil(jours_est)) * characters.size()
+	var besoin_r := int(ceil(jours_est)) * characters.size() * 0.3
 	if rations_dispo() < besoin_r:
-		_ask_voyage_confirm("Rations insuffisantes (%d en soute pour %d nécessaires) — êtes-vous sûr de vouloir faire cela ?" % [rations_dispo(), besoin_r], func() -> void: _do_voyage_inter(body, dist))
+		_ask_voyage_confirm("Nourriture insuffisante (%s kg en soute pour %s kg nécessaires) — êtes-vous sûr de vouloir faire cela ?" % [MAUtils.fmt_num(rations_dispo()), MAUtils.fmt_num(besoin_r)], func() -> void: _do_voyage_inter(body, dist))
 		return
 	_do_voyage_inter(body, dist)
 
@@ -1738,11 +1783,11 @@ func _render_journal(res: Dictionary, dest_sys: StarSystem, sal_total: int, prel
 		bb += "Dégâts subis : " + " ; ".join(T["degats"]) + "\n"
 	if T["majeurs"].size() > 0:
 		bb += "Événements majeurs : " + " ; ".join(T["majeurs"]) + "\n"
-	bb += "Radix consommé : %s PC (réserve restante : %s / %s PC) · Rations consommées : %d (reste %d)\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), T["rations"], ship.rations]
+	bb += "Radix consommé : %s PC (réserve restante : %s / %s PC) · Nourriture consommée : %s kg (reste %s kg)\n" % [MAUtils.fmt_num(T["radix_pc"]), MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc), MAUtils.fmt_num(int(T["rations"]) * 0.3), MAUtils.fmt_num(nourriture_kg())]
 	if int(T.get("repas_utilises", 0)) > 0:
-		bb += "Repas consommés en priorité comme rations : %d (reste %s).\n" % [int(T["repas_utilises"]), MAUtils.fmt_int(int(ship.cargaison.get("Repas", 0)))]
-	if T["rations"] > 0 and ship.rations == 0:
-		bb += "[color=ff5544]Famine à bord : les rations sont épuisées ![/color]\n"
+		bb += "Repas consommés en priorité comme nourriture : %d (reste %s).\n" % [int(T["repas_utilises"]), MAUtils.fmt_int(int(ship.cargaison.get("Repas", 0)))]
+	if int(T["rations"]) > 0 and nourriture_kg() <= 0.001:
+		bb += "[color=ff5544]Famine à bord : la nourriture est épuisée ![/color]\n"
 	if int(T.get("famine_jours", 0)) > 0:
 		bb += "[color=ff5544]Privation : %d jour(s) sans manger — 3L par personne et par jour (ignore la protection).[/color]\n" % int(T["famine_jours"])
 		for s in T.get("sante_famine", []):
@@ -1794,9 +1839,9 @@ func refresh_all() -> void:
 	pos_label.text = "Position : %s (%s)" % [GalaxyData.coord_label(current_pos.x, current_pos.y), GalaxyData.coord_text(current_pos.x, current_pos.y)]
 	refresh_ship_health()
 	radix_label.text = "Radix : %s / %s PC" % [MAUtils.fmt_int(ship.radix_pc), MAUtils.fmt_int(ship.autonomie_pc)]
-	var rd: int = rations_dispo()
-	var besoin: int = rations_necessaires()
-	rations_label.text = "Rations en soute : %d (besoin : %d)" % [rd, besoin]
+	var rd: float = rations_dispo()
+	var besoin: float = rations_necessaires()
+	rations_label.text = "Nourriture en soute : %s kg (besoin : %s kg · 300 g/pers/jour)" % [MAUtils.fmt_num(rd), MAUtils.fmt_num(besoin)]
 	if rd <= 0:
 		rations_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 	elif rd < besoin:
@@ -1827,8 +1872,8 @@ func refresh_all() -> void:
 	var titre: String
 	var sys_nom: String = current_system.nom if current_system != null else "?"
 	if est_rel and pc:
-		items = ShopTables.STATION_RELAIS
-		titre = "Commerce — station-relais %s (tarifs du comptoir OCG, GdM p125)" % sys_nom
+		items = ShopTables.MARCHANDISES
+		titre = "Commerce — station-relais %s (comptoir OCG : marchandises, tarifs fixes, GdM p125)" % sys_nom
 	elif pc:
 		items = []
 		for nom in articles_trouves.keys():
@@ -1837,7 +1882,7 @@ func refresh_all() -> void:
 				it = ShopTables.find_marchandise(nom)
 			if it != null:
 				items.append(it)
-		titre = "Commerce — planète %s (catalogue MdJ p234-243 + marchandises p233 ; %d article(s) trouvé(s))" % [sys_nom, articles_trouves.size()]
+		titre = "Commerce — planète %s (marchandises MdJ p233 ; %d marchandise(s) trouvée(s))" % [sys_nom, articles_trouves.size()]
 	else:
 		items = []
 		titre = "Commerce — %s (pas d'astroport sur ce corps)" % sys_nom

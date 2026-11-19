@@ -22,8 +22,7 @@ const CATALOGUE := [
 	{"nom": "Module-mémoire", "prix": 1000, "dispo": "A", "cat": "Courant", "note": "5 coordonnées de saut ; stockage de données.", "place": 0.01},
 	{"nom": "Navordinateur de poche", "prix": 750, "dispo": "A", "cat": "Courant", "note": "(sc) en Navigation à la surface des planètes.", "place": 0.2},
 	{"nom": "Pièces détachées (1 kg)", "prix": 2, "dispo": "B", "cat": "Courant", "marchandise": true, "note": "Réparer un vaisseau, véhicule ou objet (1 kg consommé par réparation) — marchandise comptée au kg.", "place": 0.001},
-	{"nom": "Ration", "prix": 1, "dispo": "C", "cat": "Courant", "note": "1 ration = 0,5 kg (1 ration/personne/jour de voyage) — vendue à l'unité.", "place": 0.005},
-	{"nom": "Repas", "prix": 25, "dispo": "B", "cat": "Courant", "note": "Un bon repas.", "place": 0.01},
+	{"nom": "Repas", "prix": 25, "dispo": "B", "cat": "Courant", "note": "Un bon repas (compte comme 300 g de nourriture).", "place": 0.01},
 	{"nom": "Respirateur", "prix": 10, "dispo": "B", "cat": "Courant", "note": "(SC) contre gaz et atmosphères nocives ; ~50 h.", "place": 0.1},
 	{"nom": "Sac à dos", "prix": 1, "dispo": "C", "cat": "Courant", "note": "Emporte 10 kg.", "place": 0.05},
 	{"nom": "Scaphandre", "prix": 500, "dispo": "B", "cat": "Courant", "note": "Réserve d'air 1 h ; immunité au vide.", "place": 1.0},
@@ -66,7 +65,7 @@ const CATALOGUE := [
 ]
 
 const MARCHANDISES := [
-	{"nom": "Agroalimentaire (1 UC)", "prix": 250, "dispo": "C", "cat": "Marchandises", "note": "Produits agricoles/alimentaires en vrac. Achat : prix de revente ×3.", "place": 1.0, "achat_x3": true},
+	{"nom": "Nourriture (1 UC)", "prix": 250, "dispo": "C", "cat": "Marchandises", "note": "Nourriture en vrac (rations fusionnées) — 1 UC = 1 t ; chaque personnage consomme 300 g/jour. Achat : prix de revente ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Alcools (1 UC)", "prix": 1000, "dispo": "C", "cat": "Marchandises", "note": "Boissons alcoolisées. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Alliages raffinés (1 UC)", "prix": 5000, "dispo": "B", "cat": "Marchandises", "note": "Alliages industriels. Achat : ×3.", "place": 1.0, "achat_x3": true},
 	{"nom": "Armes (1 UC)", "prix": 5000, "dispo": "B", "cat": "Marchandises", "note": "Armes personnelles et protections en vrac. Achat : ×3. Illégal.", "place": 1.0, "achat_x3": true, "illegal": true},
@@ -104,7 +103,6 @@ const STATION_RELAIS := [
 	{"nom": "Eau (1 L)", "prix": 2, "dispo": "C", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.001},
 	{"nom": "Instruments d'électronique", "prix": 500, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 1.0},
 	{"nom": "Pièces détachées (1 kg)", "prix": 5, "dispo": "B", "cat": "Station-relais", "marchandise": true, "note": "Comptoir OCG, au kg — marchandise comptée au kg.", "place": 0.001},
-	{"nom": "Ration", "prix": 2, "dispo": "C", "cat": "Station-relais", "note": "Comptoir OCG — à l'unité (1 ration = 0,5 kg).", "place": 0.005},
 	{"nom": "Repas", "prix": 2, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 0.01},
 	{"nom": "Scaphandre", "prix": 1000, "dispo": "B", "cat": "Station-relais", "note": "Comptoir OCG.", "place": 1.0},
 ]

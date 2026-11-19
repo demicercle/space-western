@@ -5,7 +5,7 @@ signal buy_requested(item: Dictionary)
 signal search_requested
 signal sell_requested(nom: String)
 
-const TAB_TITLES := ["Marchandises", "Courant", "Militaire", "Médical", "Luxe"]
+const TAB_TITLES := ["Marchandises"]
 
 var title_label: Label
 var info_label: Label
@@ -52,14 +52,6 @@ static func _couleur_prix(c: float) -> Color:
 	return Color(0.86, 0.89, 0.96)
 
 static func _tab_of(cat: String) -> int:
-	if cat == "Militaire":
-		return 3
-	if cat == "Médical":
-		return 4
-	if cat == "Courant" or cat == "Station-relais":
-		return 2
-	if cat == "Luxe":
-		return 5
 	return 1
 
 func _ready() -> void:
@@ -278,7 +270,7 @@ func set_catalog(p_items: Array, titre: String, p_credits: int, p_soute_used: fl
 		own.add_theme_font_size_override("font_size", 12)
 		own.add_theme_color_override("font_color", Color(0.65, 0.9, 0.75))
 		grid.add_child(own)
-	var counts := [0, 0, 0, 0, 0, 0]
+	var counts := [0, 0]
 	for it in items:
 		counts[_tab_of(str(it.get("cat", "")))] += 1
 	var n_soute := 0

@@ -30,7 +30,6 @@ var prix := 0
 var origine := ""
 var systemes_secondaires: Array = []
 var cargaison := {}
-var rations := 0
 var radix_pc := 0
 
 static func etat_txt(e: String) -> String:
@@ -72,9 +71,8 @@ static func galactic_basic(nom: String) -> Ship:
 	s.origine = "OCG"
 	s.systemes_secondaires = []
 	s.radix_pc = s.autonomie_pc
-	s.rations = 200
 	s.cargaison = {
-		"Ration": 200,
+		"Nourriture (1 UC)": 0.1,
 		"Medikit": 1,
 		"Munitions laser (x10)": 4,
 		"Scaphandre": 2,
@@ -114,9 +112,8 @@ static func galactic_scout(nom: String) -> Ship:
 	s.origine = "OCG"
 	s.systemes_secondaires = ["Sas d'abordage", "Infirmerie"]
 	s.radix_pc = s.autonomie_pc
-	s.rations = 200
 	s.cargaison = {
-		"Ration": 200,
+		"Nourriture (1 UC)": 0.1,
 		"Medikit": 1,
 		"Munitions laser (x10)": 4,
 		"Scaphandre": 2,
@@ -167,5 +164,5 @@ func fiche_txt() -> String:
 	for a in armement:
 		lines.append("  %s — %s (%s)" % [a["pos"], a["nom"], a["stats"]])
 	lines.append("Systèmes secondaires : " + (", ".join(systemes_secondaires) if systemes_secondaires.size() > 0 else "aucun"))
-	lines.append("Rations en soute : %d (1 par personne et par jour de voyage)" % rations)
+	lines.append("Nourriture en soute : %s kg (300 g/personne/jour de voyage)" % MAUtils.fmt_num(float(cargaison.get("Nourriture (1 UC)", 0)) * 1000.0))
 	return "\n".join(lines)
