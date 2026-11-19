@@ -90,3 +90,65 @@ grow_horizontal = 0
 scale = Vector2(0.8, 0.8)
 pivot_offset = Vector2(32, 16)
 text = "F1"
+
+[node name="SellBuyPopup" type="PanelContainer" parent="." unique_id=978751611]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -55.0
+offset_right = 160.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(160, 64)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SellBuyPopup" unique_id=151371485]
+layout_mode = 2
+
+[node name="Title" type="RichTextLabel" parent="SellBuyPopup/VBoxContainer" unique_id=704692772]
+layout_mode = 2
+text = "Vendre / Acheter"
+fit_content = true
+horizontal_alignment = 1
+
+[node name="ItemName" type="RichTextLabel" parent="SellBuyPopup/VBoxContainer" unique_id=1310542062]
+layout_mode = 2
+text = "[article]"
+fit_content = true
+horizontal_alignment = 1
+
+[node name="HBoxContainer1" type="HBoxContainer" parent="SellBuyPopup/VBoxContainer" unique_id=1173101466]
+layout_mode = 2
+
+[node name="Quantity" type="Label" parent="SellBuyPopup/VBoxContainer/HBoxContainer1" unique_id=205762020]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+text = "99999"
+horizontal_alignment = 1
+
+[node name="Slider" type="HSlider" parent="SellBuyPopup/VBoxContainer/HBoxContainer1" unique_id=1890535720]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TotalPrice" type="RichTextLabel" parent="SellBuyPopup/VBoxContainer" unique_id=2047424593]
+layout_mode = 2
+text = "Total : [prix]"
+fit_content = true
+horizontal_alignment = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="SellBuyPopup/VBoxContainer" unique_id=1868267672]
+layout_mode = 2
+alignment = 1
+
+[node name="OKButton" type="Button" parent="SellBuyPopup/VBoxContainer/HBoxContainer2" unique_id=59248272]
+layout_mode = 2
+text = "OK"
+
+[node name="CancelButton" type="Button" parent="SellBuyPopup/VBoxContainer/HBoxContainer2" unique_id=2109410364]
+layout_mode = 2
+text = "Annuler"
